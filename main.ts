@@ -10,14 +10,14 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
 
-export default class MyPlugin extends Plugin {
+export default class ObsidianAnkiPlugin extends Plugin {
 	settings: MyPluginSettings;
 
 	async onload() {
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			new Notice('This is a notice!');
 		});
@@ -26,7 +26,7 @@ export default class MyPlugin extends Plugin {
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+		statusBarItemEl.setText('🔴 Anki connect'); // 🟢
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -66,7 +66,7 @@ export default class MyPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new ObsidianAnkiSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -107,10 +107,10 @@ class SampleModal extends Modal {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class ObsidianAnkiSettingTab extends PluginSettingTab {
+	plugin: ObsidianAnkiPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: ObsidianAnkiPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
