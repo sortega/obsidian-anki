@@ -6,3 +6,14 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+/* Disabled state for Insert Flashcard button */
+.insert-flashcard-ribbon-class.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.insert-flashcard-ribbon-class.is-disabled:hover {
+    background-color: transparent;
+}

@@ -1,22 +1,27 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { YankiConnect } from 'yanki-connect';
+import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
 
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
 	mySetting: string;
+	lastUsedNoteType: string;
+	availableNoteTypes: Record<string, string[]>;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+	mySetting: 'default',
+	lastUsedNoteType: 'Basic',
+	availableNoteTypes: {}
 }
 
 export default class ObsidianAnkiPlugin extends Plugin {
 	settings: MyPluginSettings;
 	private ankiConnect: YankiConnect;
 	private ankiStatusBar: HTMLElement;
-	private availableNoteTypes: Record<string, string[]> = {};
 	private availableDecks: string[] = [];
+	private insertFlashcardButton: HTMLElement;
 
 	async onload() {
 		await this.loadSettings();
@@ -30,6 +35,23 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		});
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
+		// Add ribbon icon for inserting flashcards
+		this.insertFlashcardButton = this.addRibbonIcon('file-plus', 'Insert Flashcard', (evt: MouseEvent) => {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (activeView) {
+				const modalProps: FlashcardInsertModalProps = {
+					availableNoteTypes: this.settings.availableNoteTypes,
+					lastUsedNoteType: this.settings.lastUsedNoteType,
+					onNoteTypeSelected: async (noteType: string) => {
+						this.settings.lastUsedNoteType = noteType;
+						await this.saveSettings();
+					}
+				};
+				new FlashcardInsertModal(this.app, modalProps).open();
+			}
+		});
+		this.insertFlashcardButton.addClass('insert-flashcard-ribbon-class');
+
 		// This adds a status bar item to the bottom of the app
 		this.ankiStatusBar = this.addStatusBarItem();
 		
@@ -40,6 +62,14 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		this.registerInterval(window.setInterval(() => {
 			this.connectToAnki('Periodic check');
 		}, 10 * 1000));
+
+		// Update button state when active view changes
+		this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+			this.updateInsertFlashcardButtonState();
+		}));
+		
+		// Update button state initially
+		this.updateInsertFlashcardButtonState();
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -113,19 +143,48 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			this.availableDecks = deckNames;
 
 			// Get field names for each note type
-			this.availableNoteTypes = {};
+			this.settings.availableNoteTypes = {};
 			for (const noteTypeName of noteTypeNames) {
 				const fieldNames = await this.ankiConnect.model.modelFieldNames({ modelName: noteTypeName });
-				this.availableNoteTypes[noteTypeName] = fieldNames;
+				this.settings.availableNoteTypes[noteTypeName] = fieldNames;
 			}
 
-			console.log(`[${context}] Anki connection successful. Note types with fields:`, this.availableNoteTypes, 'Decks:', this.availableDecks);
+			// Save note types to settings
+			await this.saveSettings();
+
+			console.log(`[${context}] Anki connection successful. Note types with fields:`, this.settings.availableNoteTypes, 'Decks:', this.availableDecks);
 			this.ankiStatusBar.setText(`🟢 Anki: ${deckNames.length} decks`);
+			
+			// Update button state since note types might have changed
+			this.updateInsertFlashcardButtonState();
 		} catch (error) {
 			this.availableDecks = [];
-			this.availableNoteTypes = {};
+			// Note: availableNoteTypes remain in settings from last successful connection
 			console.log(`[${context}] Anki connection failed:`, error);
 			this.ankiStatusBar.setText('🔴 Anki disconnected');
+			
+			// Update button state since note types are now from cache
+			this.updateInsertFlashcardButtonState();
+		}
+	}
+
+	private updateInsertFlashcardButtonState() {
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const hasNoteTypes = Object.keys(this.settings.availableNoteTypes).length > 0;
+		const isEnabled = activeView !== null && hasNoteTypes;
+		
+		if (isEnabled) {
+			this.insertFlashcardButton.removeClass('is-disabled');
+			this.insertFlashcardButton.setAttribute('aria-label', 'Insert Flashcard');
+		} else {
+			this.insertFlashcardButton.addClass('is-disabled');
+			let reason = '';
+			if (!activeView) {
+				reason = 'No markdown editor active';
+			} else if (!hasNoteTypes) {
+				reason = 'No Anki note types available';
+			}
+			this.insertFlashcardButton.setAttribute('aria-label', `Insert Flashcard (${reason})`);
 		}
 	}
 }
@@ -169,5 +228,43 @@ class ObsidianAnkiSettingTab extends PluginSettingTab {
 					this.plugin.settings.mySetting = value;
 					await this.plugin.saveSettings();
 				}));
+
+		// Available Note Types section
+		const hasNoteTypes = Object.keys(this.plugin.settings.availableNoteTypes).length > 0;
+		
+		new Setting(containerEl)
+			.setName('Anki Note Types')
+			.setDesc(hasNoteTypes 
+				? 'Note types saved from the last successful connection to Anki' 
+				: 'No note types cached yet')
+			.addButton(button => button
+				.setButtonText('Reset Cache')
+				.setDisabled(!hasNoteTypes)
+				.onClick(async () => {
+					this.plugin.settings.availableNoteTypes = {};
+					await this.plugin.saveSettings();
+					this.plugin['updateInsertFlashcardButtonState']();
+					this.display();
+				}));
+
+		if (hasNoteTypes) {
+			const noteTypesList = containerEl.createEl('div', { cls: 'cached-note-types-list' });
+			noteTypesList.style.marginLeft = '20px';
+			noteTypesList.style.marginTop = '10px';
+			
+			for (const [noteType, fields] of Object.entries(this.plugin.settings.availableNoteTypes)) {
+				const noteTypeItem = noteTypesList.createEl('div', { cls: 'note-type-item' });
+				noteTypeItem.style.marginBottom = '8px';
+				
+				const noteTypeName = noteTypeItem.createEl('strong', { text: noteType });
+				noteTypeName.style.display = 'block';
+				
+				const fieldsText = noteTypeItem.createEl('small', { 
+					text: `Fields: ${fields.join(', ')}`,
+					cls: 'note-type-fields'
+				});
+				fieldsText.style.color = 'var(--text-muted)';
+			}
+		}
 	}
 }
