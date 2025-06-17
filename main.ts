@@ -1,4 +1,5 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { YankiConnect } from 'yanki-connect';
 
 // Remember to rename these classes and interfaces!
 
@@ -12,21 +13,31 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 
 export default class ObsidianAnkiPlugin extends Plugin {
 	settings: MyPluginSettings;
+	private ankiConnect: YankiConnect;
+	private ankiStatusBar: HTMLElement;
 
 	async onload() {
 		await this.loadSettings();
 
+		// Initialize Anki Connect
+		this.ankiConnect = new YankiConnect();
+
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (evt: MouseEvent) => {
+			await this.testAnkiConnection('Sync operation');
 		});
-		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('🔴 Anki connect'); // 🟢
+		// This adds a status bar item to the bottom of the app
+		this.ankiStatusBar = this.addStatusBarItem();
+		
+		// Test connection on startup
+		await this.testAnkiConnection('Plugin startup');
+
+		// Test connection every 10 seconds
+		this.registerInterval(window.setInterval(() => {
+			this.testAnkiConnection('Periodic check');
+		}, 10 * 1000));
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -88,6 +99,17 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	private async testAnkiConnection(context: string) {
+		try {
+			const deckNames = await this.ankiConnect.deck.deckNames();
+			console.log(`[${context}] Anki connection successful. Deck names:`, deckNames);
+			this.ankiStatusBar.setText(`🟢 Anki: ${deckNames.length} decks`);
+		} catch (error) {
+			console.log(`[${context}] Anki connection failed:`, error);
+			this.ankiStatusBar.setText('🔴 Anki disconnected');
+		}
 	}
 }
 
