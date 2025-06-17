@@ -15,6 +15,8 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	settings: MyPluginSettings;
 	private ankiConnect: YankiConnect;
 	private ankiStatusBar: HTMLElement;
+	private availableNoteTypes: Record<string, string[]> = {};
+	private availableDecks: string[] = [];
 
 	async onload() {
 		await this.loadSettings();
@@ -24,19 +26,19 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (evt: MouseEvent) => {
-			await this.testAnkiConnection('Sync operation');
+			await this.connectToAnki('Sync operation');
 		});
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
 		// This adds a status bar item to the bottom of the app
 		this.ankiStatusBar = this.addStatusBarItem();
 		
-		// Test connection on startup
-		await this.testAnkiConnection('Plugin startup');
+		// Connect to Anki on startup
+		await this.connectToAnki('Plugin startup');
 
-		// Test connection every 10 seconds
+		// Connect to Anki every 10 seconds
 		this.registerInterval(window.setInterval(() => {
-			this.testAnkiConnection('Periodic check');
+			this.connectToAnki('Periodic check');
 		}, 10 * 1000));
 
 		// This adds a simple command that can be triggered anywhere
@@ -101,12 +103,27 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	private async testAnkiConnection(context: string) {
+	private async connectToAnki(context: string) {
 		try {
-			const deckNames = await this.ankiConnect.deck.deckNames();
-			console.log(`[${context}] Anki connection successful. Deck names:`, deckNames);
+			const [noteTypeNames, deckNames] = await Promise.all([
+				this.ankiConnect.model.modelNames(),
+				this.ankiConnect.deck.deckNames()
+			]);
+			
+			this.availableDecks = deckNames;
+
+			// Get field names for each note type
+			this.availableNoteTypes = {};
+			for (const noteTypeName of noteTypeNames) {
+				const fieldNames = await this.ankiConnect.model.modelFieldNames({ modelName: noteTypeName });
+				this.availableNoteTypes[noteTypeName] = fieldNames;
+			}
+
+			console.log(`[${context}] Anki connection successful. Note types with fields:`, this.availableNoteTypes, 'Decks:', this.availableDecks);
 			this.ankiStatusBar.setText(`🟢 Anki: ${deckNames.length} decks`);
 		} catch (error) {
+			this.availableDecks = [];
+			this.availableNoteTypes = {};
 			console.log(`[${context}] Anki connection failed:`, error);
 			this.ankiStatusBar.setText('🔴 Anki disconnected');
 		}
