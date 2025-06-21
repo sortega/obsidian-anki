@@ -4,7 +4,8 @@
       "Bash(rg:*)",
       "WebFetch(domain:docs.obsidian.md)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
