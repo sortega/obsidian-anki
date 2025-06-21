@@ -17,3 +17,150 @@ If your plugin does not need CSS, delete this file.
 .insert-flashcard-ribbon-class.is-disabled:hover {
     background-color: transparent;
 }
+
+/* Flashcard rendering styles */
+.flashcard-container {
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-family: var(--font-interface);
+}
+
+.flashcard-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.flashcard-note-type {
+    font-size: var(--font-ui-small);
+    font-weight: 600;
+    color: var(--text-accent);
+    background: var(--background-modifier-accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.flashcard-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.flashcard-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.flashcard-field-label {
+    font-size: var(--font-ui-small);
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.flashcard-field-content {
+    color: var(--text-normal);
+    line-height: 1.5;
+    padding-left: 8px;
+}
+
+.flashcard-field-content p {
+    margin: 0.5em 0;
+}
+
+.flashcard-field-content p:first-child {
+    margin-top: 0;
+}
+
+.flashcard-field-content p:last-child {
+    margin-bottom: 0;
+}
+
+.flashcard-footer {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--background-modifier-border);
+    font-size: var(--font-ui-small);
+}
+
+.flashcard-tags-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.flashcard-tags-content {
+    color: var(--text-normal);
+    font-style: italic;
+}
+
+/* Error flashcard styles */
+.flashcard-error {
+    background: var(--background-primary);
+    border: 2px solid var(--text-error);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0;
+    font-family: var(--font-interface);
+}
+
+.flashcard-error-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--text-error);
+}
+
+.flashcard-error-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--text-error);
+    color: var(--background-primary);
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.flashcard-error-title {
+    font-size: var(--font-ui-small);
+    font-weight: 600;
+    color: var(--text-error);
+}
+
+.flashcard-error-content {
+    margin: 0;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 12px;
+}
+
+.flashcard-error-content code {
+    background: transparent;
+    color: var(--text-normal);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    padding: 0;
+}
+
+/* Dark theme adjustments */
+.theme-dark .flashcard-container {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .flashcard-error {
+    box-shadow: 0 2px 4px rgba(255, 0, 0, 0.1);
+}

@@ -32,6 +32,9 @@ The plugin follows standard Obsidian plugin patterns:
 
 - `ObsidianAnkiPlugin` - Main plugin class that handles initialization, commands, and Anki connection
 - `FlashcardInsertModal` - Modal for selecting note types and inserting flashcard blocks
+- `FlashcardRenderer` - Renders valid flashcards with proper styling and markdown support
+- `FlashcardProcessor` - Handles flashcard code block processing and error display
+- `BlockFlashcardParser` - Parses YAML-formatted flashcard content with detailed error reporting
 - `ObsidianAnkiSettingTab` - Settings interface for plugin configuration and note type cache
 - `SampleModal` - Legacy modal component (should be removed in cleanup)
 - Anki connection testing happens on plugin load via `YankiConnect.deck.deckNames()`
@@ -49,12 +52,21 @@ tags:
   - topic2
 ```
 
+## Flashcard Rendering
+
+The plugin now includes comprehensive flashcard rendering with:
+
+- **Visual flashcard display** - Styled cards with note type headers, field content, and tags
+- **Error handling** - Invalid flashcards show with red border and detailed error messages
+- **Hover tooltips** - Error icons display specific parsing issues on hover
+- **Markdown support** - Field content supports full Obsidian markdown rendering
+- **Fallback display** - Invalid flashcards still show original YAML content for editing
+
 ## Current Limitations & TODOs
 
 - Sync button only tests connection, doesn't perform actual sync
 - No progress tracking for sync operations
 - No keyboard shortcuts defined
-- No flashcard rendering in reading mode
 - No cloze deletion syntax support
 - Missing media file synchronization
 

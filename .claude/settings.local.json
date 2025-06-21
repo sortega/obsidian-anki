@@ -3,7 +3,8 @@
     "allow": [
       "Bash(rg:*)",
       "WebFetch(domain:docs.obsidian.md)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

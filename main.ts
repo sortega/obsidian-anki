@@ -1,6 +1,7 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, MarkdownPostProcessorContext } from 'obsidian';
 import { YankiConnect } from 'yanki-connect';
 import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
+import { FlashcardProcessor } from './flashcard-renderer';
 
 // Remember to rename these classes and interfaces!
 
@@ -70,6 +71,11 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		
 		// Update button state initially
 		this.updateInsertFlashcardButtonState();
+
+		// Register flashcard code block processor
+		this.registerMarkdownCodeBlockProcessor('flashcard', (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
+			FlashcardProcessor.render(source, el, ctx.sourcePath, ctx);
+		});
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
