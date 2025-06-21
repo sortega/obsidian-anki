@@ -72,7 +72,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 	}
 }
 
-export class FlashcardProcessor {
+export class FlashcardCodeBlockProcessor {
 	static render(source: string, el: HTMLElement, sourcePath: string, ctx: any) {
 		const parseResult = BlockFlashcardParser.parseFlashcard(source);
 		

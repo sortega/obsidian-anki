@@ -33,7 +33,7 @@ The plugin follows standard Obsidian plugin patterns:
 - `ObsidianAnkiPlugin` - Main plugin class that handles initialization, commands, and Anki connection
 - `FlashcardInsertModal` - Modal for selecting note types and inserting flashcard blocks
 - `FlashcardRenderer` - Renders valid flashcards with proper styling and markdown support
-- `FlashcardProcessor` - Handles flashcard code block processing and error display
+- `FlashcardCodeBlockProcessor` - Orchestrates flashcard code block processing and error display
 - `BlockFlashcardParser` - Parses YAML-formatted flashcard content with detailed error reporting
 - `ObsidianAnkiSettingTab` - Settings interface for plugin configuration and note type cache
 - `SampleModal` - Legacy modal component (should be removed in cleanup)
