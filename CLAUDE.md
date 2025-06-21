@@ -61,6 +61,8 @@ The plugin now includes comprehensive flashcard rendering with:
 - **Hover tooltips** - Error icons display specific parsing issues on hover
 - **Markdown support** - Field content supports full Obsidian markdown rendering
 - **Fallback display** - Invalid flashcards still show original YAML content for editing
+- **Robust YAML parsing** - Uses js-yaml library for proper YAML syntax support
+- **Advanced YAML features** - Supports multiline strings (|, >), arrays, quoted strings, and complex structures
 
 ## Current Limitations & TODOs
 

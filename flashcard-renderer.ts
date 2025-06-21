@@ -1,5 +1,5 @@
 import { MarkdownRenderChild, MarkdownRenderer } from 'obsidian';
-import { FlashcardData, FlashcardParseResult, BlockFlashcardParser } from './flashcard';
+import { FlashcardData, FlashcardParseResult, BlockFlashcardParser, METADATA_FIELDS } from './flashcard';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private flashcardData: FlashcardData;
@@ -32,9 +32,8 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
 		// Render all fields except metadata
-		const metadataFields = ['note_type', 'anki_id', 'tags'];
 		for (const [fieldName, fieldValue] of Object.entries(this.flashcardData)) {
-			if (metadataFields.includes(fieldName) || fieldValue == null) {
+			if (METADATA_FIELDS.includes(fieldName) || fieldValue == null) {
 				continue;
 			}
 
