@@ -7,6 +7,7 @@
 - ✅ Anki connection via `yanki-connect` library
 - ✅ Status bar showing Anki connection status
 - ✅ Flashcard insertion modal with note type selection
+- ✅ Flashcard rendering in edit and reading mode
 - ✅ Settings tab with note type caching
 - ✅ Periodic Anki connection checking (10s intervals)
 - ✅ Note type and deck retrieval from Anki
@@ -14,7 +15,6 @@
 ### Current Limitations
 - 🔄 Sync button exists but performs no actual syncing
 - ❌ No keyboard shortcuts for any actions
-- ❌ No flashcard rendering in reading mode
 - ❌ No progress tracking for sync operations
 - ❌ No media file synchronization
 - ❌ No cloze deletion syntax support
