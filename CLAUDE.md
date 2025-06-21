@@ -52,6 +52,8 @@ tags:
   - topic2
 ```
 
+**Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `tags: "topic1, topic2"` are not supported and will cause parsing errors.
+
 ## Flashcard Rendering
 
 The plugin now includes comprehensive flashcard rendering with:

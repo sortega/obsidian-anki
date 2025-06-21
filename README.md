@@ -45,6 +45,8 @@ tags:
   - europe
 ```
 
+**Important**: Tags must be formatted as a YAML list using the dash syntax shown above. String formats like `tags: "geography, europe"` are not supported.
+
 ### Advanced Flashcard Formatting
 
 The plugin supports rich markdown content within flashcards:

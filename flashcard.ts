@@ -3,7 +3,7 @@ import * as yaml from 'js-yaml';
 export interface FlashcardData {
 	note_type?: string;
 	anki_id?: string;
-	tags?: string[] | string;
+	tags?: string[];
 	[key: string]: any;
 }
 
@@ -28,30 +28,32 @@ export class BlockFlashcardParser {
 			}
 
 			// Parse YAML using js-yaml
-			const parsed = yaml.load(trimmedSource);
+			const data = yaml.load(trimmedSource);
 			
 			// Validate that we got an object
-			if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+			if (!data || typeof data !== 'object' || Array.isArray(data)) {
 				return {
 					error: 'Flashcard content must be a YAML object with key-value pairs'
 				};
 			}
 
-			const data = parsed as FlashcardData;
-
-			// Normalize tags field - ensure it's an array of strings
-			if (data.tags) {
-				if (typeof data.tags === 'string') {
-					// Split comma-separated or newline-separated tags
-					data.tags = data.tags
-						.split(/[,\n]/)
-						.map(tag => tag.trim())
-						.filter(tag => tag.length > 0);
-				} else if (Array.isArray(data.tags)) {
-					// Ensure all tags are strings and filter out empty ones
-					data.tags = data.tags
-						.map(tag => String(tag).trim())
-						.filter(tag => tag.length > 0);
+			// Validate tags field - must be an array of strings if present
+			if ((data as any).tags !== undefined) {
+				if (!Array.isArray((data as any).tags)) {
+					return {
+						error: 'Tags field must be a YAML list of strings. Use:\ntags:\n  - tag1\n  - tag2'
+					};
+				}
+				
+				// Ensure all tags are non-empty strings
+				for (let i = 0; i < (data as any).tags.length; i++) {
+					const tag = (data as any).tags[i];
+					if (typeof tag !== 'string' || tag.trim().length === 0) {
+						return {
+							error: `Tag at position ${i + 1} must be a non-empty string`
+						};
+					}
+					(data as any).tags[i] = tag.trim();
 				}
 			}
 

@@ -60,11 +60,8 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 				text: 'Tags: ',
 				cls: 'flashcard-tags-label'
 			});
-			const tagsText = Array.isArray(this.flashcardData.tags) 
-				? this.flashcardData.tags.join(', ')
-				: this.flashcardData.tags;
 			const tagsContent = footer.createEl('span', { 
-				text: tagsText,
+				text: this.flashcardData.tags.join(', '),
 				cls: 'flashcard-tags-content'
 			});
 		}

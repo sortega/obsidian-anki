@@ -73,6 +73,22 @@ note_type: Basic
 tags: [test]
 ```
 
+## Invalid Tag Formats (should show errors)
+
+```flashcard
+note_type: Basic
+front: Question
+back: Answer
+tags: "geography, europe"
+```
+
+```flashcard
+note_type: Basic
+front: Question
+back: Answer
+tags: geography, europe
+```
+
 ## Minimal Flashcard
 
 ```flashcard
