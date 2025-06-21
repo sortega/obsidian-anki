@@ -2,6 +2,7 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import { YankiConnect } from 'yanki-connect';
 import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
 import { FlashcardCodeBlockProcessor } from './flashcard-renderer';
+import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-modal';
 
 // Remember to rename these classes and interfaces!
 
@@ -33,6 +34,11 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (evt: MouseEvent) => {
 			await this.connectToAnki('Sync operation');
+			if (this.availableDecks.length === 0) {
+				new Notice("Cannot connect to Anki");
+				return;
+			}
+			await this.startSyncProcess();
 		});
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
@@ -191,6 +197,20 @@ export default class ObsidianAnkiPlugin extends Plugin {
 				reason = 'No Anki note types available';
 			}
 			this.insertFlashcardButton.setAttribute('aria-label', `Insert Flashcard (${reason})`);
+		}
+	}
+
+	private async startSyncProcess() {
+		try {
+			// Show progress modal and start scanning
+			const progressModal = new SyncProgressModal(this.app, (analysis: SyncAnalysis) => {
+				// When scanning is complete, show confirmation modal
+				new SyncConfirmationModal(this.app, analysis).open();
+			});
+			progressModal.open();
+		} catch (error) {
+			console.error('Failed to start sync process:', error);
+			new Notice('Failed to start sync process');
 		}
 	}
 }
