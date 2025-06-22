@@ -1,6 +1,7 @@
 import * as yaml from 'js-yaml';
 
 export interface FlashcardData {
+	sourcePath: string;
 	note_type: string;
 	anki_id?: number;  // Missing for new, yet to be synced cards
 	tags: string[];
@@ -45,7 +46,7 @@ export class BlockFlashcardParser {
 		return typeof data === 'object' && data !== null && !Array.isArray(data);
 	}
 
-	static parseFlashcard(source: string): FlashcardParseResult {
+	static parseFlashcard(source: string, sourcePath: string): FlashcardParseResult {
 		try {
 			// Trim whitespace
 			const trimmedSource = source.trim();
@@ -121,6 +122,7 @@ export class BlockFlashcardParser {
 
 			// Construct FlashcardData with proper structure and mandatory defaults
 			const flashcardData: FlashcardData = {
+				sourcePath,
 				note_type: ('note_type' in data && typeof data.note_type === 'string') 
 					? data.note_type 
 					: DEFAULT_NOTE_TYPE,

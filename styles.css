@@ -307,6 +307,7 @@ If your plugin does not need CSS, delete this file.
 
 .sync-flashcard-item {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;

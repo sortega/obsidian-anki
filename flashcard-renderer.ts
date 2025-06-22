@@ -1,14 +1,12 @@
 import { MarkdownRenderChild, MarkdownRenderer, MarkdownPostProcessorContext } from 'obsidian';
-import { FlashcardData, FlashcardParseResult, BlockFlashcardParser, METADATA_FIELDS, DEFAULT_NOTE_TYPE } from './flashcard';
+import { FlashcardData, BlockFlashcardParser } from './flashcard';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private flashcardData: FlashcardData;
-	private sourcePath: string;
 
-	constructor(containerEl: HTMLElement, flashcardData: FlashcardData, sourcePath: string) {
+	constructor(containerEl: HTMLElement, flashcardData: FlashcardData) {
 		super(containerEl);
 		this.flashcardData = flashcardData;
-		this.sourcePath = sourcePath;
 	}
 
 	onload() {
@@ -52,7 +50,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			const fieldContentEl = fieldContainer.createEl('div', { cls: 'flashcard-field-content' });
 			
 			// Render markdown content
-			MarkdownRenderer.renderMarkdown(fieldValue, fieldContentEl, this.sourcePath, this);
+			MarkdownRenderer.renderMarkdown(fieldValue, fieldContentEl, this.flashcardData.sourcePath, this);
 		}
 
 		// Footer with tags if present
@@ -75,11 +73,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 }
 
 export class FlashcardCodeBlockProcessor {
-	static render(source: string, el: HTMLElement, sourcePath: string, ctx: MarkdownPostProcessorContext) {
-		const parseResult = BlockFlashcardParser.parseFlashcard(source);
+	static render(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
+		const parseResult = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath);
 		
 		if (parseResult.data) {
-			const renderer = new FlashcardRenderer(el, parseResult.data, sourcePath);
+			const renderer = new FlashcardRenderer(el, parseResult.data);
 			ctx.addChild(renderer);
 		} else {
 			// If parsing fails, show error UI with original code block
