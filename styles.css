@@ -46,6 +46,18 @@ If your plugin does not need CSS, delete this file.
     border-radius: 4px;
 }
 
+.flashcard-new-indicator {
+    font-size: var(--font-ui-smaller);
+    font-weight: 700;
+    color: var(--text-on-accent);
+    background: var(--text-success);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .flashcard-content {
     display: flex;
     flex-direction: column;

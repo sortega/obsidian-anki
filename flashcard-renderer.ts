@@ -28,6 +28,14 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			cls: 'flashcard-note-type'
 		});
 
+		// Add NEW indicator if flashcard hasn't been synced yet
+		if (!this.flashcardData.anki_id) {
+			header.createEl('span', { 
+				text: 'NEW',
+				cls: 'flashcard-new-indicator'
+			});
+		}
+
 		// Content area
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
