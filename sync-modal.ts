@@ -148,16 +148,15 @@ export class SyncProgressModal extends Modal {
 						const ankiId = block.data.anki_id;
 						if (ankiId) {
 							// Flashcard has anki_id - check if it exists in Anki
-							const ankiIdNum = parseInt(ankiId);
-							if (ankiNoteIds.includes(ankiIdNum)) {
+							if (ankiNoteIds.includes(ankiId)) {
 								// Compare with Anki data to determine if changed
-								const ankiNoteData = ankiNotesData.get(ankiIdNum);
+								const ankiNoteData = ankiNotesData.get(ankiId);
 								if (ankiNoteData && this.compareFlashcardWithAnki(block.data, ankiNoteData)) {
 									this.analysis.unchangedFlashcards.push(block);
 								} else {
 									this.analysis.changedFlashcards.push(block);
 								}
-								seenAnkiIds.add(ankiIdNum);
+								seenAnkiIds.add(ankiId);
 							} else {
 								// Card was deleted from Anki, treat as new
 								this.analysis.newFlashcards.push(block);

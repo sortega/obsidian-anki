@@ -2,7 +2,7 @@ import * as yaml from 'js-yaml';
 
 export interface FlashcardData {
 	note_type: string;
-	anki_id?: string;  // Missing for new, yet to be synced cards
+	anki_id?: number;  // Missing for new, yet to be synced cards
 	tags: string[];
 	content_fields: Record<string, string>;
 }
@@ -131,8 +131,24 @@ export class BlockFlashcardParser {
 			};
 			
 			// Add optional metadata fields
-			if ('anki_id' in data && typeof data.anki_id === 'string') {
-				flashcardData.anki_id = data.anki_id;
+			if ('anki_id' in data && data.anki_id !== undefined && data.anki_id !== null) {
+				// Handle anki_id as number, string, or numeric string
+				if (typeof data.anki_id === 'number') {
+					flashcardData.anki_id = data.anki_id;
+				} else if (typeof data.anki_id === 'string') {
+					const parsedId = Number(data.anki_id);
+					if (Number.isInteger(parsedId) && parsedId > 0) {
+						flashcardData.anki_id = parsedId;
+					} else {
+						return {
+							error: `anki_id must be a positive integer, got: ${data.anki_id}`
+						};
+					}
+				} else {
+					return {
+						error: `anki_id must be a number or numeric string, got: ${typeof data.anki_id}`
+					};
+				}
 			}
 
 			return { data: flashcardData };
