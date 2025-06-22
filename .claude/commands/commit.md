@@ -14,5 +14,5 @@ description: Create a git commit
 
 Based on the above changes:
 
-  1. Update PLAN.md, README.md and CLAUDE.md if necessary
+  1. Update PLAN.md, README.md and CLAUDE.md if necessary with what changed.
   2. Create a single git commit.
