@@ -1,6 +1,6 @@
 import { App, Modal, Notice, CachedMetadata, TFile } from 'obsidian';
 import { YankiConnect } from 'yanki-connect';
-import { FlashcardData, BlockFlashcardParser } from './flashcard';
+import { FlashcardData, BlockFlashcardParser, FlashcardFieldRenderer, AnkiNoteInfo } from './flashcard';
 
 export interface FlashcardBlock {
 	file: string;
@@ -126,10 +126,14 @@ export class SyncProgressModal extends Modal {
 
 		// Track which Anki notes we've seen
 		const seenAnkiIds = new Set<number>();
+		
+		// Fetch Anki note data for comparison (batch fetch for performance)
+		this.updateProgress(0.25, 'Fetching Anki note data for comparison...');
+		const ankiNotesData = await this.fetchAnkiNoteData(ankiNoteIds);
 
 		for (let i = 0; i < markdownFiles.length; i++) {
 			const file = markdownFiles[i];
-			const progressPercent = 0.2 + (0.7 * i / markdownFiles.length); // 20% to 90%
+			const progressPercent = 0.3 + (0.6 * i / markdownFiles.length); // 30% to 90%
 			this.updateProgress(progressPercent, `Processing: ${file.path}`);
 
 			try {
@@ -144,15 +148,19 @@ export class SyncProgressModal extends Modal {
 					if (parseResult.data) {
 						block.data = parseResult.data;
 						
-						// Categorize immediately
+						// Categorize based on anki_id and content comparison
 						const ankiId = block.data.anki_id;
 						if (ankiId) {
 							// Flashcard has anki_id - check if it exists in Anki
 							const ankiIdNum = parseInt(ankiId);
 							if (ankiNoteIds.includes(ankiIdNum)) {
-								// TODO: For now, assume all existing cards are unchanged
-								// In the future, we could compare content hashes
-								this.analysis.unchangedFlashcards.push(block);
+								// Compare with Anki data to determine if changed
+								const ankiNoteData = ankiNotesData.get(ankiIdNum);
+								if (ankiNoteData && this.compareFlashcardWithAnki(block.data, ankiNoteData)) {
+									this.analysis.unchangedFlashcards.push(block);
+								} else {
+									this.analysis.changedFlashcards.push(block);
+								}
 								seenAnkiIds.add(ankiIdNum);
 							} else {
 								// Card was deleted from Anki, treat as new
@@ -200,10 +208,7 @@ export class SyncProgressModal extends Modal {
 		
 		// Get code blocks from sections (cache.blocks is for different purpose)
 		// Use sections which contains code blocks with type information
-		let codeBlocks: any[] = [];
-		if (cache.sections) {
-			codeBlocks = cache.sections.filter(section => section.type === 'code');
-		}
+		const codeBlocks = cache.sections?.filter(section => section.type === 'code') ?? [];
 		
 		if (codeBlocks.length === 0) {
 			return blocks; // No code blocks, skip file entirely
@@ -243,6 +248,75 @@ export class SyncProgressModal extends Modal {
 		}
 		
 		return blocks;
+	}
+
+	private async fetchAnkiNoteData(ankiNoteIds: number[]): Promise<Map<number, AnkiNoteInfo>> {
+		const ankiNotesData = new Map<number, AnkiNoteInfo>();
+		
+		if (ankiNoteIds.length === 0) {
+			return ankiNotesData;
+		}
+		
+		try {
+			// Fetch note info from Anki (batch operation for performance)
+			const notesInfo = await this.ankiConnect.note.notesInfo({ notes: ankiNoteIds });
+			
+			for (const noteInfo of notesInfo) {
+				if (noteInfo && noteInfo.noteId) {
+					// Type assertion since we know the structure from yanki-connect
+					ankiNotesData.set(noteInfo.noteId, noteInfo as AnkiNoteInfo);
+				}
+			}
+			
+			console.log(`Fetched ${ankiNotesData.size} Anki notes for comparison`);
+		} catch (error) {
+			console.warn('Failed to fetch Anki note data:', error);
+		}
+		
+		return ankiNotesData;
+	}
+	
+	private compareFlashcardWithAnki(flashcardData: FlashcardData, ankiNoteData: AnkiNoteInfo): boolean {
+		try {
+			// Compare rendered fields
+			const flashcardFields = FlashcardFieldRenderer.renderFlashcardFields(flashcardData);
+			const ankiFields = ankiNoteData.fields || {};
+			
+			// Check if all flashcard fields match Anki fields
+			for (const [fieldName, fieldValue] of Object.entries(flashcardFields)) {
+				const ankiFieldValue = ankiFields[fieldName]?.value || '';
+				// Remove HTML tags and normalize whitespace for comparison
+				const normalizedAnkiValue = ankiFieldValue.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
+				
+				if (fieldValue !== normalizedAnkiValue) {
+					console.log(`Field mismatch in ${fieldName}:`, {
+						obsidian: fieldValue,
+						anki: normalizedAnkiValue
+					});
+					return false;
+				}
+			}
+			
+			// Compare tags
+			const flashcardTagsText = FlashcardFieldRenderer.renderTagsToText(flashcardData.tags);
+			const ankiTagsText = FlashcardFieldRenderer.renderTagsToText(ankiNoteData.tags);
+			
+			if (flashcardTagsText !== ankiTagsText) {
+				console.log('Tags mismatch:', {
+					obsidian: flashcardTagsText,
+					anki: ankiTagsText
+				});
+				return false;
+			}
+			
+			// If we reach here, all fields and tags match
+			return true;
+			
+		} catch (error) {
+			console.warn('Error comparing flashcard with Anki note:', error);
+			// If comparison fails, assume it's changed to be safe
+			return false;
+		}
 	}
 
 	private updateProgress(progress: number, statusText: string) {
@@ -508,9 +582,7 @@ export class SyncConfirmationModal extends Modal {
 					noteType: flashcard.data?.note_type,
 					tags: flashcard.data?.tags,
 					ankiId: flashcard.data?.anki_id || 'none',
-					fields: Object.keys(flashcard.data || {}).filter(key => 
-						!['note_type', 'anki_id', 'tags'].includes(key)
-					),
+					fields: Object.keys(flashcard.data?.content_fields || {}),
 					data: flashcard.data
 				});
 			});
@@ -524,9 +596,7 @@ export class SyncConfirmationModal extends Modal {
 					noteType: flashcard.data?.note_type,
 					tags: flashcard.data?.tags,
 					ankiId: flashcard.data?.anki_id,
-					fields: Object.keys(flashcard.data || {}).filter(key => 
-						!['note_type', 'anki_id', 'tags'].includes(key)
-					),
+					fields: Object.keys(flashcard.data?.content_fields || {}),
 					data: flashcard.data
 				});
 			});
@@ -540,9 +610,7 @@ export class SyncConfirmationModal extends Modal {
 					noteType: flashcard.data?.note_type,
 					tags: flashcard.data?.tags,
 					ankiId: flashcard.data?.anki_id,
-					fields: Object.keys(flashcard.data || {}).filter(key => 
-						!['note_type', 'anki_id', 'tags'].includes(key)
-					),
+					fields: Object.keys(flashcard.data?.content_fields || {}),
 					data: flashcard.data
 				});
 			});

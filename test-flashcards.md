@@ -60,9 +60,6 @@ back: >
   be joined into a single line with
   spaces between the lines.
 tags: ["math", "geometry", "advanced"]
-metadata:
-  difficulty: hard
-  source: "textbook chapter 5"
 ```
 
 ## Edge Cases

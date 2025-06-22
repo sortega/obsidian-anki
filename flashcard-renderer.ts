@@ -1,5 +1,5 @@
-import { MarkdownRenderChild, MarkdownRenderer } from 'obsidian';
-import { FlashcardData, FlashcardParseResult, BlockFlashcardParser, METADATA_FIELDS } from './flashcard';
+import { MarkdownRenderChild, MarkdownRenderer, MarkdownPostProcessorContext } from 'obsidian';
+import { FlashcardData, FlashcardParseResult, BlockFlashcardParser, METADATA_FIELDS, DEFAULT_NOTE_TYPE } from './flashcard';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private flashcardData: FlashcardData;
@@ -22,9 +22,8 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 
 		// Header with note type
 		const header = containerEl.createEl('div', { cls: 'flashcard-header' });
-		const noteType = this.flashcardData.note_type || 'Basic';
 		header.createEl('span', { 
-			text: `Note Type: ${noteType}`,
+			text: `Note Type: ${this.flashcardData.note_type}`,
 			cls: 'flashcard-note-type'
 		});
 
@@ -39,12 +38,8 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Content area
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
-		// Render all fields except metadata
-		for (const [fieldName, fieldValue] of Object.entries(this.flashcardData)) {
-			if (METADATA_FIELDS.includes(fieldName) || fieldValue == null) {
-				continue;
-			}
-
+		// Render all content fields
+		for (const [fieldName, fieldValue] of Object.entries(this.flashcardData.content_fields)) {
 			const fieldContainer = content.createEl('div', { cls: 'flashcard-field' });
 			
 			// Field label
@@ -57,12 +52,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			const fieldContentEl = fieldContainer.createEl('div', { cls: 'flashcard-field-content' });
 			
 			// Render markdown content
-			const fieldText = typeof fieldValue === 'string' ? fieldValue : String(fieldValue);
-			MarkdownRenderer.renderMarkdown(fieldText, fieldContentEl, this.sourcePath, this);
+			MarkdownRenderer.renderMarkdown(fieldValue, fieldContentEl, this.sourcePath, this);
 		}
 
 		// Footer with tags if present
-		if (this.flashcardData.tags && this.flashcardData.tags.length > 0) {
+		if (this.flashcardData.tags.length > 0) {
 			const footer = containerEl.createEl('div', { cls: 'flashcard-footer' });
 			const tagsLabel = footer.createEl('span', { 
 				text: 'Tags: ',
@@ -81,7 +75,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 }
 
 export class FlashcardCodeBlockProcessor {
-	static render(source: string, el: HTMLElement, sourcePath: string, ctx: any) {
+	static render(source: string, el: HTMLElement, sourcePath: string, ctx: MarkdownPostProcessorContext) {
 		const parseResult = BlockFlashcardParser.parseFlashcard(source);
 		
 		if (parseResult.data) {
