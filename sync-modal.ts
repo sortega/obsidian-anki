@@ -1,4 +1,5 @@
 import { App, Modal, Notice } from 'obsidian';
+import { YankiConnect } from 'yanki-connect';
 import { FlashcardData, BlockFlashcardParser } from './flashcard';
 
 export interface FlashcardBlock {
@@ -14,8 +15,11 @@ export interface SyncAnalysis {
 	totalFiles: number;
 	scannedFiles: number;
 	flashcardBlocks: FlashcardBlock[];
-	validFlashcards: FlashcardBlock[];
+	newFlashcards: FlashcardBlock[];
+	changedFlashcards: FlashcardBlock[];
+	unchangedFlashcards: FlashcardBlock[];
 	invalidFlashcards: FlashcardBlock[];
+	deletedAnkiNotes: number[];
 }
 
 export class SyncProgressModal extends Modal {
@@ -24,16 +28,23 @@ export class SyncProgressModal extends Modal {
 	private statusText: HTMLElement;
 	private analysis: SyncAnalysis;
 	private onComplete: (analysis: SyncAnalysis) => void;
+	private ankiConnect: YankiConnect;
+	private vaultName: string;
 
-	constructor(app: App, onComplete: (analysis: SyncAnalysis) => void) {
+	constructor(app: App, ankiConnect: YankiConnect, onComplete: (analysis: SyncAnalysis) => void) {
 		super(app);
 		this.onComplete = onComplete;
+		this.ankiConnect = ankiConnect;
+		this.vaultName = app.vault.getName();
 		this.analysis = {
 			totalFiles: 0,
 			scannedFiles: 0,
 			flashcardBlocks: [],
-			validFlashcards: [],
-			invalidFlashcards: []
+			newFlashcards: [],
+			changedFlashcards: [],
+			unchangedFlashcards: [],
+			invalidFlashcards: [],
+			deletedAnkiNotes: []
 		};
 	}
 
@@ -74,7 +85,12 @@ export class SyncProgressModal extends Modal {
 
 	private async startScanning() {
 		try {
-			await this.scanVaultForFlashcards();
+			// First, search Anki for existing notes
+			const ankiNoteIds = await this.searchAnki();
+			
+			// Then scan vault and categorize in one go
+			await this.scanVaultAndCategorize(ankiNoteIds);
+			
 			this.onComplete(this.analysis);
 			this.close();
 		} catch (error) {
@@ -84,27 +100,67 @@ export class SyncProgressModal extends Modal {
 		}
 	}
 
-	private async scanVaultForFlashcards() {
+	private async searchAnki(): Promise<number[]> {
+		try {
+			// Search for notes with our plugin tags
+			const vaultTag = `obsidian-vault::${this.vaultName}`;
+			const searchQuery = `tag:obsidian-synced AND tag:${vaultTag}`;
+			
+			this.updateProgress(0.1, 'Searching Anki for existing notes...');
+			
+			const ankiNoteIds = await this.ankiConnect.note.findNotes({ query: searchQuery });
+			
+			this.updateProgress(0.2, `Found ${ankiNoteIds.length} existing notes in Anki`);
+			return ankiNoteIds;
+			
+		} catch (error) {
+			console.warn('Failed to search Anki:', error);
+			this.updateProgress(0.2, 'Anki search failed - treating all as new');
+			return [];
+		}
+	}
+
+	private async scanVaultAndCategorize(ankiNoteIds: number[]) {
 		const markdownFiles = this.app.vault.getMarkdownFiles();
 		this.analysis.totalFiles = markdownFiles.length;
 
-		this.updateProgress(0, `Found ${markdownFiles.length} markdown files`);
+		// Track which Anki notes we've seen
+		const seenAnkiIds = new Set<number>();
 
 		for (let i = 0; i < markdownFiles.length; i++) {
 			const file = markdownFiles[i];
-			this.updateProgress(i / markdownFiles.length, `Scanning: ${file.path}`);
+			const progressPercent = 0.2 + (0.7 * i / markdownFiles.length); // 20% to 90%
+			this.updateProgress(progressPercent, `Processing: ${file.path}`);
 
 			try {
 				const content = await this.app.vault.read(file);
 				const blocks = this.extractFlashcardBlocks(content, file.path);
 				this.analysis.flashcardBlocks.push(...blocks);
 
-				// Process each block
+				// Process and categorize each block
 				for (const block of blocks) {
 					const parseResult = BlockFlashcardParser.parseFlashcard(block.content);
 					if (parseResult.data) {
 						block.data = parseResult.data;
-						this.analysis.validFlashcards.push(block);
+						
+						// Categorize immediately
+						const ankiId = block.data.anki_id;
+						if (ankiId) {
+							// Flashcard has anki_id - check if it exists in Anki
+							const ankiIdNum = parseInt(ankiId);
+							if (ankiNoteIds.includes(ankiIdNum)) {
+								// TODO: For now, assume all existing cards are unchanged
+								// In the future, we could compare content hashes
+								this.analysis.unchangedFlashcards.push(block);
+								seenAnkiIds.add(ankiIdNum);
+							} else {
+								// Card was deleted from Anki, treat as new
+								this.analysis.newFlashcards.push(block);
+							}
+						} else {
+							// No anki_id - this is a new flashcard
+							this.analysis.newFlashcards.push(block);
+						}
 					} else {
 						block.error = parseResult.error;
 						this.analysis.invalidFlashcards.push(block);
@@ -117,13 +173,22 @@ export class SyncProgressModal extends Modal {
 			this.analysis.scannedFiles = i + 1;
 
 			// Small delay to allow UI updates
-			if (i % 10 === 0) {
+			if (i % 5 === 0) {
 				await new Promise(resolve => setTimeout(resolve, 1));
 			}
 		}
 
-		this.updateProgress(1, 'Scan complete!');
+		// Find deleted notes (exist in Anki but not in vault)
+		this.updateProgress(0.95, 'Identifying deleted notes...');
+		for (const ankiId of ankiNoteIds) {
+			if (!seenAnkiIds.has(ankiId)) {
+				this.analysis.deletedAnkiNotes.push(ankiId);
+			}
+		}
+
+		this.updateProgress(1, 'Analysis complete!');
 	}
+
 
 	private extractFlashcardBlocks(content: string, filePath: string): FlashcardBlock[] {
 		const blocks: FlashcardBlock[] = [];
@@ -196,20 +261,46 @@ export class SyncConfirmationModal extends Modal {
 			text: `📁 Files scanned: ${this.analysis.scannedFiles}`
 		});
 		
-		statsContainer.createEl('div', { 
+		// Create flashcard category section
+		const flashcardHeader = statsContainer.createEl('div', { 
 			cls: 'sync-stat-item',
-			text: `📇 Total flashcard blocks: ${this.analysis.flashcardBlocks.length}`
+			text: `📇 Flashcards:`
 		});
+		flashcardHeader.style.fontWeight = '600';
+		flashcardHeader.style.marginTop = '10px';
 		
-		statsContainer.createEl('div', { 
-			cls: 'sync-stat-item sync-stat-valid',
-			text: `✅ Valid flashcards: ${this.analysis.validFlashcards.length}`
-		});
+		if (this.analysis.newFlashcards.length > 0) {
+			statsContainer.createEl('div', { 
+				cls: 'sync-stat-item sync-stat-new',
+				text: `  ➕ New: ${this.analysis.newFlashcards.length}`
+			});
+		}
+		
+		if (this.analysis.changedFlashcards.length > 0) {
+			statsContainer.createEl('div', { 
+				cls: 'sync-stat-item sync-stat-changed',
+				text: `  📝 Changed: ${this.analysis.changedFlashcards.length}`
+			});
+		}
+		
+		if (this.analysis.unchangedFlashcards.length > 0) {
+			statsContainer.createEl('div', { 
+				cls: 'sync-stat-item sync-stat-unchanged',
+				text: `  ✅ Unchanged: ${this.analysis.unchangedFlashcards.length}`
+			});
+		}
 		
 		if (this.analysis.invalidFlashcards.length > 0) {
 			statsContainer.createEl('div', { 
 				cls: 'sync-stat-item sync-stat-invalid',
-				text: `❌ Invalid flashcards: ${this.analysis.invalidFlashcards.length}`
+				text: `  ❌ Invalid: ${this.analysis.invalidFlashcards.length}`
+			});
+		}
+		
+		if (this.analysis.deletedAnkiNotes.length > 0) {
+			statsContainer.createEl('div', { 
+				cls: 'sync-stat-item sync-stat-deleted',
+				text: `  🗑️ Deleted: ${this.analysis.deletedAnkiNotes.length}`
 			});
 		}
 
@@ -253,13 +344,13 @@ export class SyncConfirmationModal extends Modal {
 		
 		const detailsContent = detailsSection.createEl('div', { cls: 'sync-details-content' });
 		
-		// Valid flashcards
-		if (this.analysis.validFlashcards.length > 0) {
-			const validSection = detailsContent.createEl('div', { cls: 'sync-section' });
-			validSection.createEl('h4', { text: 'Valid Flashcards' });
+		// New flashcards
+		if (this.analysis.newFlashcards.length > 0) {
+			const newSection = detailsContent.createEl('div', { cls: 'sync-section' });
+			newSection.createEl('h4', { text: 'New Flashcards' });
 			
-			for (const flashcard of this.analysis.validFlashcards.slice(0, 5)) { // Show first 5
-				const item = validSection.createEl('div', { cls: 'sync-flashcard-item' });
+			for (const flashcard of this.analysis.newFlashcards.slice(0, 5)) {
+				const item = newSection.createEl('div', { cls: 'sync-flashcard-item sync-flashcard-new' });
 				item.createEl('span', { 
 					cls: 'sync-flashcard-file',
 					text: `${flashcard.file}:${flashcard.lineStart}`
@@ -270,10 +361,85 @@ export class SyncConfirmationModal extends Modal {
 				});
 			}
 			
-			if (this.analysis.validFlashcards.length > 5) {
-				validSection.createEl('div', { 
+			if (this.analysis.newFlashcards.length > 5) {
+				newSection.createEl('div', { 
 					cls: 'sync-more-items',
-					text: `... and ${this.analysis.validFlashcards.length - 5} more`
+					text: `... and ${this.analysis.newFlashcards.length - 5} more`
+				});
+			}
+		}
+		
+		// Changed flashcards
+		if (this.analysis.changedFlashcards.length > 0) {
+			const changedSection = detailsContent.createEl('div', { cls: 'sync-section' });
+			changedSection.createEl('h4', { text: 'Changed Flashcards' });
+			
+			for (const flashcard of this.analysis.changedFlashcards.slice(0, 5)) {
+				const item = changedSection.createEl('div', { cls: 'sync-flashcard-item sync-flashcard-changed' });
+				item.createEl('span', { 
+					cls: 'sync-flashcard-file',
+					text: `${flashcard.file}:${flashcard.lineStart}`
+				});
+				item.createEl('span', { 
+					cls: 'sync-flashcard-type',
+					text: flashcard.data?.note_type || 'Basic'
+				});
+			}
+			
+			if (this.analysis.changedFlashcards.length > 5) {
+				changedSection.createEl('div', { 
+					cls: 'sync-more-items',
+					text: `... and ${this.analysis.changedFlashcards.length - 5} more`
+				});
+			}
+		}
+		
+		// Unchanged flashcards
+		if (this.analysis.unchangedFlashcards.length > 0) {
+			const unchangedSection = detailsContent.createEl('div', { cls: 'sync-section' });
+			unchangedSection.createEl('h4', { text: 'Unchanged Flashcards' });
+			
+			for (const flashcard of this.analysis.unchangedFlashcards.slice(0, 3)) {
+				const item = unchangedSection.createEl('div', { cls: 'sync-flashcard-item sync-flashcard-unchanged' });
+				item.createEl('span', { 
+					cls: 'sync-flashcard-file',
+					text: `${flashcard.file}:${flashcard.lineStart}`
+				});
+				item.createEl('span', { 
+					cls: 'sync-flashcard-type',
+					text: flashcard.data?.note_type || 'Basic'
+				});
+			}
+			
+			if (this.analysis.unchangedFlashcards.length > 3) {
+				unchangedSection.createEl('div', { 
+					cls: 'sync-more-items',
+					text: `... and ${this.analysis.unchangedFlashcards.length - 3} more`
+				});
+			}
+		}
+		
+		// Deleted Anki notes
+		if (this.analysis.deletedAnkiNotes.length > 0) {
+			const deletedSection = detailsContent.createEl('div', { cls: 'sync-section' });
+			deletedSection.createEl('h4', { text: 'Deleted from Anki' });
+			
+			for (const ankiId of this.analysis.deletedAnkiNotes.slice(0, 5)) {
+				const item = deletedSection.createEl('div', { cls: 'sync-flashcard-item sync-flashcard-deleted' });
+				item.createEl('span', { 
+					cls: 'sync-flashcard-file',
+					text: `Anki Note ID: ${ankiId}`
+				});
+				item.createEl('span', { 
+					cls: 'sync-flashcard-error',
+					text: 'Will be deleted from Anki'
+				});
+			}
+			
+			if (this.analysis.deletedAnkiNotes.length > 5) {
+				deletedSection.createEl('div', { 
+					cls: 'sync-more-items',
+					text: `... and ${this.analysis.deletedAnkiNotes.length - 5} more`
 				});
 			}
 		}
@@ -310,20 +476,67 @@ export class SyncConfirmationModal extends Modal {
 			totalFiles: this.analysis.totalFiles,
 			scannedFiles: this.analysis.scannedFiles,
 			totalBlocks: this.analysis.flashcardBlocks.length,
-			validFlashcards: this.analysis.validFlashcards.length,
-			invalidFlashcards: this.analysis.invalidFlashcards.length
+			newFlashcards: this.analysis.newFlashcards.length,
+			changedFlashcards: this.analysis.changedFlashcards.length,
+			unchangedFlashcards: this.analysis.unchangedFlashcards.length,
+			invalidFlashcards: this.analysis.invalidFlashcards.length,
+			deletedAnkiNotes: this.analysis.deletedAnkiNotes.length
 		});
 
-		if (this.analysis.validFlashcards.length > 0) {
-			console.group('✅ Valid Flashcards');
-			this.analysis.validFlashcards.forEach((flashcard, index) => {
+		if (this.analysis.newFlashcards.length > 0) {
+			console.group('➕ New Flashcards');
+			this.analysis.newFlashcards.forEach((flashcard, index) => {
 				console.log(`${index + 1}. ${flashcard.file}:${flashcard.lineStart}`, {
 					noteType: flashcard.data?.note_type,
 					tags: flashcard.data?.tags,
+					ankiId: flashcard.data?.anki_id || 'none',
 					fields: Object.keys(flashcard.data || {}).filter(key => 
 						!['note_type', 'anki_id', 'tags'].includes(key)
 					),
 					data: flashcard.data
+				});
+			});
+			console.groupEnd();
+		}
+		
+		if (this.analysis.changedFlashcards.length > 0) {
+			console.group('📝 Changed Flashcards');
+			this.analysis.changedFlashcards.forEach((flashcard, index) => {
+				console.log(`${index + 1}. ${flashcard.file}:${flashcard.lineStart}`, {
+					noteType: flashcard.data?.note_type,
+					tags: flashcard.data?.tags,
+					ankiId: flashcard.data?.anki_id,
+					fields: Object.keys(flashcard.data || {}).filter(key => 
+						!['note_type', 'anki_id', 'tags'].includes(key)
+					),
+					data: flashcard.data
+				});
+			});
+			console.groupEnd();
+		}
+		
+		if (this.analysis.unchangedFlashcards.length > 0) {
+			console.group('✅ Unchanged Flashcards');
+			this.analysis.unchangedFlashcards.forEach((flashcard, index) => {
+				console.log(`${index + 1}. ${flashcard.file}:${flashcard.lineStart}`, {
+					noteType: flashcard.data?.note_type,
+					tags: flashcard.data?.tags,
+					ankiId: flashcard.data?.anki_id,
+					fields: Object.keys(flashcard.data || {}).filter(key => 
+						!['note_type', 'anki_id', 'tags'].includes(key)
+					),
+					data: flashcard.data
+				});
+			});
+			console.groupEnd();
+		}
+		
+		if (this.analysis.deletedAnkiNotes.length > 0) {
+			console.group('🗑️ Deleted Anki Notes');
+			this.analysis.deletedAnkiNotes.forEach((ankiId, index) => {
+				console.log(`${index + 1}. Anki Note ID: ${ankiId}`, {
+					status: 'exists in Anki but not in vault',
+					action: 'will be deleted from Anki'
 				});
 			});
 			console.groupEnd();

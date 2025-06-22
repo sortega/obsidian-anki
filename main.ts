@@ -203,7 +203,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	private async startSyncProcess() {
 		try {
 			// Show progress modal and start scanning
-			const progressModal = new SyncProgressModal(this.app, (analysis: SyncAnalysis) => {
+			const progressModal = new SyncProgressModal(this.app, this.ankiConnect, (analysis: SyncAnalysis) => {
 				// When scanning is complete, show confirmation modal
 				new SyncConfirmationModal(this.app, analysis).open();
 			});

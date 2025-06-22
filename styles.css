@@ -219,6 +219,22 @@ If your plugin does not need CSS, delete this file.
     border-left: 3px solid var(--text-error);
 }
 
+.sync-stat-new {
+    border-left: 3px solid var(--text-success);
+}
+
+.sync-stat-changed {
+    border-left: 3px solid var(--text-warning);
+}
+
+.sync-stat-unchanged {
+    border-left: 3px solid var(--text-muted);
+}
+
+.sync-stat-deleted {
+    border-left: 3px solid var(--text-error);
+}
+
 .sync-button-container {
     display: flex;
     gap: 10px;
@@ -289,6 +305,22 @@ If your plugin does not need CSS, delete this file.
 }
 
 .sync-flashcard-invalid {
+    border-left-color: var(--text-error);
+}
+
+.sync-flashcard-new {
+    border-left-color: var(--text-success);
+}
+
+.sync-flashcard-changed {
+    border-left-color: var(--text-warning);
+}
+
+.sync-flashcard-unchanged {
+    border-left-color: var(--text-muted);
+}
+
+.sync-flashcard-deleted {
     border-left-color: var(--text-error);
 }
 
