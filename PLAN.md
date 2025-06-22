@@ -4,20 +4,20 @@
 
 ### Implemented Features
 - ✅ Basic plugin structure with ribbon icons
-- ✅ Anki connection via `yanki-connect` library
+- ✅ Anki connection via `yanki-connect` library through service layer
 - ✅ Status bar showing Anki connection status
 - ✅ Flashcard insertion modal with note type selection
 - ✅ Flashcard rendering in edit and reading mode
-- ✅ Settings tab with note type caching
+- ✅ Settings tab with note type caching (AnkiNoteType[])
 - ✅ Periodic Anki connection checking (10s intervals)
-- ✅ Note type and deck retrieval from Anki
+- ✅ Note type and deck retrieval from Anki with structured data types
 
 ### Current Limitations
 - 🔄 Sync button exists but performs no actual syncing
-  - ✅ Finds all cards in the vault
-  - ✅ Finds all managed cards in Anki
-  - ❌ No content comparison
-  - ❌ No syncing to Anki
+  - ✅ Finds all cards in the vault via SyncProgressModal
+  - ✅ Finds all managed cards in Anki via getManagedNoteIds()
+  - ✅ Content comparison implemented in SyncConfirmationModal
+  - ❌ No actual syncing to Anki (shows "not yet implemented" message)
 - ❌ No keyboard shortcuts for any actions
 - ❌ No progress tracking for sync operations
 - ❌ No media file synchronization
@@ -29,19 +29,19 @@
 ### Phase 1: Core Sync Functionality
 **Priority: High**
 
-#### 1.1 Sync Progress Modal
-- Create a comprehensive modal for tracking sync operations
-- Progress indicators for:
-  - File scanning phase (files processed vs total)
-  - Flashcard discovery phase (flashcards found)
-  - Anki comparison phase (comparing local vs remote cards)
-  - Change application phase (if needed)
-- User confirmation dialog: "Create X cards, update Y cards, delete Z cards?"
+#### 1.1 Sync Progress Modal ✅ IMPLEMENTED
+- ✅ Create a comprehensive modal for tracking sync operations
+- ✅ Progress indicators for:
+  - ✅ File scanning phase (files processed vs total)
+  - ✅ Flashcard discovery phase (flashcards found)
+  - ✅ Anki comparison phase (comparing local vs remote cards)
+  - ❌ Change application phase (not yet implemented)
+- ✅ User confirmation dialog: "Create X cards, update Y cards, delete Z cards?"
 
-#### 1.2 Flashcard Detection & Processing
-- Parse all markdown files for `flashcard` code blocks
-- Extract flashcard metadata (note_type, fields, existing anki_id if present)
-- Build comprehensive flashcard inventory
+#### 1.2 Flashcard Detection & Processing ✅ IMPLEMENTED
+- ✅ Parse all markdown files for `flashcard` code blocks using MetadataCache API
+- ✅ Extract flashcard metadata (note_type, fields, existing anki_id if present)
+- ✅ Build comprehensive flashcard inventory with categorization
 
 #### 1.3 Anki Integration Strategy
 - Use tags for organization:
@@ -132,10 +132,10 @@ tags:
 ## Implementation Priority
 
 ### Immediate (Next Sprint)
-1. Implement sync progress modal UI
-2. Add file scanning and flashcard parsing logic
-3. Create Anki comparison functionality
-4. Add basic CRUD operations for Anki cards
+1. ✅ Implement sync progress modal UI
+2. ✅ Add file scanning and flashcard parsing logic  
+3. ✅ Create Anki comparison functionality
+4. ❌ Add basic CRUD operations for Anki cards (NEXT PRIORITY)
 
 ### Short Term (2-3 Sprints)
 1. Add keyboard shortcuts and commands

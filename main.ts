@@ -1,26 +1,24 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, MarkdownPostProcessorContext } from 'obsidian';
-import { YankiConnect } from 'yanki-connect';
+import { AnkiService, YankiConnectAnkiService, AnkiNoteType } from './anki-service';
 import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
 import { FlashcardCodeBlockProcessor } from './flashcard-renderer';
 import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-modal';
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
+interface PluginSettings {
 	lastUsedNoteType: string;
-	availableNoteTypes: Record<string, string[]>;
+	availableNoteTypes: AnkiNoteType[];
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default',
+const DEFAULT_SETTINGS: PluginSettings = {
 	lastUsedNoteType: 'Basic',
-	availableNoteTypes: {}
+	availableNoteTypes: []
 }
 
 export default class ObsidianAnkiPlugin extends Plugin {
-	settings: MyPluginSettings;
-	private ankiConnect: YankiConnect;
+	settings: PluginSettings;
+	private ankiService: AnkiService;
 	private ankiStatusBar: HTMLElement;
 	private availableDecks: string[] = [];
 	private insertFlashcardButton: HTMLElement;
@@ -28,8 +26,8 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Initialize Anki Connect
-		this.ankiConnect = new YankiConnect();
+		// Initialize Anki Service
+		this.ankiService = new YankiConnectAnkiService();
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (evt: MouseEvent) => {
@@ -147,21 +145,15 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 	private async connectToAnki(context: string) {
 		try {
-			const [noteTypeNames, deckNames] = await Promise.all([
-				this.ankiConnect.model.modelNames(),
-				this.ankiConnect.deck.deckNames()
+			const [noteTypes, deckNames] = await Promise.all([
+				this.ankiService.getNoteTypes(),
+				this.ankiService.getDeckNames()
 			]);
 			
 			this.availableDecks = deckNames;
 
-			// Get field names for each note type
-			this.settings.availableNoteTypes = {};
-			for (const noteTypeName of noteTypeNames) {
-				const fieldNames = await this.ankiConnect.model.modelFieldNames({ modelName: noteTypeName });
-				this.settings.availableNoteTypes[noteTypeName] = fieldNames;
-			}
-
 			// Save note types to settings
+			this.settings.availableNoteTypes = noteTypes;
 			await this.saveSettings();
 
 			console.log(`[${context}] Anki connection successful. Note types with fields:`, this.settings.availableNoteTypes, 'Decks:', this.availableDecks);
@@ -182,7 +174,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 	private updateInsertFlashcardButtonState() {
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const hasNoteTypes = Object.keys(this.settings.availableNoteTypes).length > 0;
+		const hasNoteTypes = this.settings.availableNoteTypes.length > 0;
 		const isEnabled = activeView !== null && hasNoteTypes;
 		
 		if (isEnabled) {
@@ -203,7 +195,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	private async startSyncProcess() {
 		try {
 			// Show progress modal and start scanning
-			const progressModal = new SyncProgressModal(this.app, this.ankiConnect, (analysis: SyncAnalysis) => {
+			const progressModal = new SyncProgressModal(this.app, this.ankiService, (analysis: SyncAnalysis) => {
 				// When scanning is complete, show confirmation modal
 				new SyncConfirmationModal(this.app, analysis).open();
 			});
@@ -244,19 +236,8 @@ class ObsidianAnkiSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-
 		// Available Note Types section
-		const hasNoteTypes = Object.keys(this.plugin.settings.availableNoteTypes).length > 0;
+		const hasNoteTypes = this.plugin.settings.availableNoteTypes.length > 0;
 		
 		new Setting(containerEl)
 			.setName('Anki Note Types')
@@ -267,7 +248,7 @@ class ObsidianAnkiSettingTab extends PluginSettingTab {
 				.setButtonText('Reset Cache')
 				.setDisabled(!hasNoteTypes)
 				.onClick(async () => {
-					this.plugin.settings.availableNoteTypes = {};
+					this.plugin.settings.availableNoteTypes = [];
 					await this.plugin.saveSettings();
 					this.plugin['updateInsertFlashcardButtonState']();
 					this.display();
@@ -278,15 +259,15 @@ class ObsidianAnkiSettingTab extends PluginSettingTab {
 			noteTypesList.style.marginLeft = '20px';
 			noteTypesList.style.marginTop = '10px';
 			
-			for (const [noteType, fields] of Object.entries(this.plugin.settings.availableNoteTypes)) {
+			for (const noteType of this.plugin.settings.availableNoteTypes) {
 				const noteTypeItem = noteTypesList.createEl('div', { cls: 'note-type-item' });
 				noteTypeItem.style.marginBottom = '8px';
 				
-				const noteTypeName = noteTypeItem.createEl('strong', { text: noteType });
+				const noteTypeName = noteTypeItem.createEl('strong', { text: noteType.name });
 				noteTypeName.style.display = 'block';
 				
 				const fieldsText = noteTypeItem.createEl('small', { 
-					text: `Fields: ${fields.join(', ')}`,
+					text: `Fields: ${noteType.fields.join(', ')}`,
 					cls: 'note-type-fields'
 				});
 				fieldsText.style.color = 'var(--text-muted)';

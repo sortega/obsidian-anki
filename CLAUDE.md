@@ -21,23 +21,27 @@ This is an Obsidian plugin called "Obsidian Anki" that syncs Obsidian notes to A
 
 ## Architecture
 
-The plugin follows standard Obsidian plugin patterns:
+The plugin follows hexagonal architecture principles with clean separation between business logic and technical implementation:
 
 - **Main entry point**: `main.ts` - Contains the `ObsidianAnkiPlugin` class
-- **Settings management**: Handled through `MyPluginSettings` interface and `ObsidianAnkiSettingTab` class
-- **Anki integration**: Uses `YankiConnect` from `yanki-connect` library for Anki communication
+- **Settings management**: Handled through `PluginSettings` interface and `ObsidianAnkiSettingTab` class
+- **Anki integration**: Uses hexagonal architecture with `AnkiService` interface (port) and `YankiConnectAnkiService` adapter
+- **Domain layer**: `AnkiNoteType` and `AnkiNote` interfaces for structured data
 - **Build system**: esbuild configuration in `esbuild.config.mjs` bundles TypeScript to `main.js`
 
 ## Key Components
 
 - `ObsidianAnkiPlugin` - Main plugin class that handles initialization, commands, and Anki connection
+- `AnkiService` - Interface (port) defining Anki operations needed by the application
+- `YankiConnectAnkiService` - Adapter implementing AnkiService using yanki-connect library
 - `FlashcardInsertModal` - Modal for selecting note types and inserting flashcard blocks
 - `FlashcardRenderer` - Renders valid flashcards with proper styling and markdown support
 - `FlashcardCodeBlockProcessor` - Orchestrates flashcard code block processing and error display
 - `BlockFlashcardParser` - Parses YAML-formatted flashcard content with detailed error reporting
 - `ObsidianAnkiSettingTab` - Settings interface for plugin configuration and note type cache
+- `SyncProgressModal` - Modal for vault scanning and sync progress tracking
+- `SyncConfirmationModal` - Modal for reviewing and confirming sync changes
 - `SampleModal` - Legacy modal component (should be removed in cleanup)
-- Anki connection testing happens on plugin load via `YankiConnect.deck.deckNames()`
 
 ## Flashcard Format
 

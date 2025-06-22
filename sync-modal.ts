@@ -1,6 +1,6 @@
 import { App, Modal, Notice, CachedMetadata, TFile } from 'obsidian';
-import { YankiConnect } from 'yanki-connect';
-import { FlashcardData, BlockFlashcardParser, FlashcardFieldRenderer, AnkiNoteInfo } from './flashcard';
+import { AnkiService, AnkiNote } from './anki-service';
+import { FlashcardData, BlockFlashcardParser, FlashcardFieldRenderer } from './flashcard';
 
 export interface FlashcardBlock {
 	file: string;
@@ -28,13 +28,13 @@ export class SyncProgressModal extends Modal {
 	private statusText: HTMLElement;
 	private analysis: SyncAnalysis;
 	private onComplete: (analysis: SyncAnalysis) => void;
-	private ankiConnect: YankiConnect;
+	private ankiService: AnkiService;
 	private vaultName: string;
 
-	constructor(app: App, ankiConnect: YankiConnect, onComplete: (analysis: SyncAnalysis) => void) {
+	constructor(app: App, ankiService: AnkiService, onComplete: (analysis: SyncAnalysis) => void) {
 		super(app);
 		this.onComplete = onComplete;
-		this.ankiConnect = ankiConnect;
+		this.ankiService = ankiService;
 		this.vaultName = app.vault.getName();
 		this.analysis = {
 			totalFiles: 0,
@@ -102,15 +102,11 @@ export class SyncProgressModal extends Modal {
 
 	private async searchAnki(): Promise<number[]> {
 		try {
-			// Search for notes with our plugin tags
-			const vaultTag = `obsidian-vault::${this.vaultName}`;
-			const searchQuery = `tag:obsidian-synced AND tag:${vaultTag}`;
+			this.updateProgress(0.1, 'Searching Anki for managed notes...');
 			
-			this.updateProgress(0.1, 'Searching Anki for existing notes...');
+			const ankiNoteIds = await this.ankiService.getManagedNoteIds(this.vaultName);
 			
-			const ankiNoteIds = await this.ankiConnect.note.findNotes({ query: searchQuery });
-			
-			this.updateProgress(0.2, `Found ${ankiNoteIds.length} existing notes in Anki`);
+			this.updateProgress(0.2, `Found ${ankiNoteIds.length} managed notes in Anki`);
 			return ankiNoteIds;
 			
 		} catch (error) {
@@ -250,8 +246,8 @@ export class SyncProgressModal extends Modal {
 		return blocks;
 	}
 
-	private async fetchAnkiNoteData(ankiNoteIds: number[]): Promise<Map<number, AnkiNoteInfo>> {
-		const ankiNotesData = new Map<number, AnkiNoteInfo>();
+	private async fetchAnkiNoteData(ankiNoteIds: number[]): Promise<Map<number, AnkiNote>> {
+		const ankiNotesData = new Map<number, AnkiNote>();
 		
 		if (ankiNoteIds.length === 0) {
 			return ankiNotesData;
@@ -259,12 +255,11 @@ export class SyncProgressModal extends Modal {
 		
 		try {
 			// Fetch note info from Anki (batch operation for performance)
-			const notesInfo = await this.ankiConnect.note.notesInfo({ notes: ankiNoteIds });
+			const notesInfo = await this.ankiService.getNotes(ankiNoteIds);
 			
 			for (const noteInfo of notesInfo) {
 				if (noteInfo && noteInfo.noteId) {
-					// Type assertion since we know the structure from yanki-connect
-					ankiNotesData.set(noteInfo.noteId, noteInfo as AnkiNoteInfo);
+					ankiNotesData.set(noteInfo.noteId, noteInfo);
 				}
 			}
 			
@@ -276,7 +271,7 @@ export class SyncProgressModal extends Modal {
 		return ankiNotesData;
 	}
 	
-	private compareFlashcardWithAnki(flashcardData: FlashcardData, ankiNoteData: AnkiNoteInfo): boolean {
+	private compareFlashcardWithAnki(flashcardData: FlashcardData, ankiNoteData: AnkiNote): boolean {
 		try {
 			// Compare rendered fields
 			const flashcardFields = FlashcardFieldRenderer.renderFlashcardFields(flashcardData);

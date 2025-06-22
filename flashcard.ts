@@ -7,18 +7,6 @@ export interface FlashcardData {
 	content_fields: Record<string, string>;
 }
 
-export interface AnkiNoteField {
-	value: string;
-	order: number;
-}
-
-export interface AnkiNoteInfo {
-	noteId: number;
-	fields: Record<string, AnkiNoteField>;
-	tags: string[];
-	modelName: string;
-	cards: number[];
-}
 
 export interface FlashcardParseResult {
 	data?: FlashcardData;

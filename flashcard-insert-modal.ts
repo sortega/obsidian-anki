@@ -1,7 +1,8 @@
 import { App, MarkdownView, SuggestModal } from 'obsidian';
+import { AnkiNoteType } from './anki-service';
 
 export interface FlashcardInsertModalProps {
-	availableNoteTypes: Record<string, string[]>;
+	availableNoteTypes: AnkiNoteType[];
 	lastUsedNoteType: string;
 	onNoteTypeSelected: (noteType: string) => Promise<void>;
 }
@@ -16,14 +17,11 @@ export class FlashcardInsertModal extends SuggestModal<string> {
 	}
 
 	getSuggestions(query: string): string[] {
-		const noteTypes = Object.keys(this.props.availableNoteTypes);
-		if (noteTypes.length === 0) {
-			return ['Basic'];
-		}
+		const noteTypeNames = this.props.availableNoteTypes.map(nt => nt.name);
 
 		// Sort by last used note type first, then by fuzzy match
 		const lastUsed = this.props.lastUsedNoteType;
-		return noteTypes.sort((a, b) => {
+		return noteTypeNames.sort((a, b) => {
 			if (a === lastUsed) return -1;
 			if (b === lastUsed) return 1;
 			
@@ -37,9 +35,10 @@ export class FlashcardInsertModal extends SuggestModal<string> {
 		});
 	}
 
-	renderSuggestion(noteType: string, el: HTMLElement) {
-		const fields = this.props.availableNoteTypes[noteType] || [];
-		el.createEl('div', { text: noteType });
+	renderSuggestion(noteTypeName: string, el: HTMLElement) {
+		const noteType = this.props.availableNoteTypes.find(nt => nt.name === noteTypeName);
+		const fields = noteType?.fields || [];
+		el.createEl('div', { text: noteTypeName });
 		if (fields.length > 0) {
 			el.createEl('small', { text: `Fields: ${fields.join(', ')}` });
 		}
@@ -61,9 +60,10 @@ export class FlashcardInsertModal extends SuggestModal<string> {
 		}
 	}
 
-	private generateFlashcardContent(noteType: string): string {
-		const fields = this.props.availableNoteTypes[noteType] || [];
+	private generateFlashcardContent(noteTypeName: string): string {
+		const noteType = this.props.availableNoteTypes.find(nt => nt.name === noteTypeName);
+		const fields = noteType?.fields || [];
 		const fieldLines = fields.map(field => `${field.toLowerCase()}: `).join('\n');
-		return `\`\`\`flashcard\nnote_type: ${noteType}\n${fieldLines}\n\`\`\``;
+		return `\`\`\`flashcard\nnote_type: ${noteTypeName}\n${fieldLines}\n\`\`\``;
 	}
 }
