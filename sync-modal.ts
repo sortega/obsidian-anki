@@ -444,7 +444,7 @@ export class SyncConfirmationModal extends Modal {
 				});
 				item.createEl('span', { 
 					cls: 'sync-flashcard-type',
-					text: flashcard.data?.note_type || 'Basic'
+					text: flashcard.data?.note_type
 				});
 			}
 			
@@ -469,7 +469,7 @@ export class SyncConfirmationModal extends Modal {
 				});
 				item.createEl('span', { 
 					cls: 'sync-flashcard-type',
-					text: flashcard.data?.note_type || 'Basic'
+					text: flashcard.data?.note_type
 				});
 			}
 			
@@ -494,7 +494,7 @@ export class SyncConfirmationModal extends Modal {
 				});
 				item.createEl('span', { 
 					cls: 'sync-flashcard-type',
-					text: flashcard.data?.note_type || 'Basic'
+					text: flashcard.data?.note_type
 				});
 			}
 			
