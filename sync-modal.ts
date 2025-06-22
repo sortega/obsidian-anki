@@ -1,4 +1,4 @@
-import { App, Modal, Notice } from 'obsidian';
+import { App, Modal, Notice, CachedMetadata, TFile } from 'obsidian';
 import { YankiConnect } from 'yanki-connect';
 import { FlashcardData, BlockFlashcardParser } from './flashcard';
 
@@ -133,8 +133,9 @@ export class SyncProgressModal extends Modal {
 			this.updateProgress(progressPercent, `Processing: ${file.path}`);
 
 			try {
-				const content = await this.app.vault.read(file);
-				const blocks = this.extractFlashcardBlocks(content, file.path);
+				// Use MetadataCache to get pre-parsed sections
+				const cache: CachedMetadata | null = this.app.metadataCache.getFileCache(file);
+				const blocks = await this.extractFlashcardBlocksFromCache(cache, file);
 				this.analysis.flashcardBlocks.push(...blocks);
 
 				// Process and categorize each block
@@ -172,8 +173,8 @@ export class SyncProgressModal extends Modal {
 
 			this.analysis.scannedFiles = i + 1;
 
-			// Small delay to allow UI updates
-			if (i % 5 === 0) {
+			// Small delay to allow UI updates (less frequent since we're faster now)
+			if (i % 10 === 0) {
 				await new Promise(resolve => setTimeout(resolve, 1));
 			}
 		}
@@ -189,37 +190,54 @@ export class SyncProgressModal extends Modal {
 		this.updateProgress(1, 'Analysis complete!');
 	}
 
-
-	private extractFlashcardBlocks(content: string, filePath: string): FlashcardBlock[] {
+	private async extractFlashcardBlocksFromCache(cache: CachedMetadata | null, file: TFile): Promise<FlashcardBlock[]> {
 		const blocks: FlashcardBlock[] = [];
+		
+		// If no cache, skip this file
+		if (!cache) {
+			return blocks;
+		}
+		
+		// Get code blocks from sections (cache.blocks is for different purpose)
+		// Use sections which contains code blocks with type information
+		let codeBlocks: any[] = [];
+		if (cache.sections) {
+			codeBlocks = cache.sections.filter(section => section.type === 'code');
+		}
+		
+		if (codeBlocks.length === 0) {
+			return blocks; // No code blocks, skip file entirely
+		}
+		
+		// Read file content only when needed
+		const content = await this.app.vault.read(file);
 		const lines = content.split('\n');
 		
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
+		// Process each code block using cached position data
+		for (const block of codeBlocks) {
+			// Handle both blocks and sections structure
+			const position = block.position;
+			const startLine = position.start.line;
+			const endLine = position.end.line;
 			
-			// Look for flashcard code block start
-			if (line.trim() === '```flashcard') {
-				const startLine = i;
-				let endLine = -1;
+			// Check if this is a flashcard block
+			if (startLine < lines.length && lines[startLine].trim() === '```flashcard') {
+				// Extract content between the code block markers
 				let blockContent = '';
-				
-				// Find the end of the code block
-				for (let j = i + 1; j < lines.length; j++) {
-					if (lines[j].trim() === '```') {
-						endLine = j;
-						break;
+				for (let i = startLine + 1; i < endLine && i < lines.length; i++) {
+					if (lines[i].trim() === '```') {
+						break; // End of code block
 					}
-					blockContent += lines[j] + '\n';
+					blockContent += lines[i] + '\n';
 				}
 				
-				if (endLine !== -1) {
+				if (blockContent.trim()) {
 					blocks.push({
-						file: filePath,
+						file: file.path,
 						lineStart: startLine + 1, // 1-indexed for user display
 						lineEnd: endLine + 1,
 						content: blockContent.trim()
 					});
-					i = endLine; // Skip to end of block
 				}
 			}
 		}
