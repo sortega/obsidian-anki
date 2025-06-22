@@ -14,6 +14,10 @@
 
 ### Current Limitations
 - 🔄 Sync button exists but performs no actual syncing
+  - ✅ Finds all cards in the vault
+  - ✅ Finds all managed cards in Anki
+  - ❌ No content comparison
+  - ❌ No syncing to Anki
 - ❌ No keyboard shortcuts for any actions
 - ❌ No progress tracking for sync operations
 - ❌ No media file synchronization
