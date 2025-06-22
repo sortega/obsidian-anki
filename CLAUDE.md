@@ -98,3 +98,7 @@ The plugin now includes comprehensive flashcard rendering with:
 3. Add keyboard shortcuts for common actions
 4. Implement flashcard rendering in reading mode
 5. Add cloze deletion syntax support
+
+## Development Guidelines
+
+- Don't commit changes to git unless being told
