@@ -33,6 +33,7 @@
 
 ### Other
 - Support for linking back to Obsidian notes
+- Import existing flashcards into an Obsidian note
 
 ## Technical Architecture Decisions
 
