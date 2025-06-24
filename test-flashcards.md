@@ -34,7 +34,7 @@ tags:
 
 ```flashcard
 note_type: Cloze
-Text: The capital of {c1::France} is {c2::Paris}.
+Text: The capital of {{c1::France}} is {{c2::Paris}}.
 tags:
   - geography
 ```
