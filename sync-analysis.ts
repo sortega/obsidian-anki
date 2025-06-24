@@ -300,14 +300,11 @@ export class SyncProgressModal extends Modal {
 				const flashcardHtml = flashcardHtmlFields[fieldName] || '';
 				const ankiHtml = ankiField?.value || '';
 				
-				// Normalize HTML for comparison
-				const normalizedFlashcardHtml = this.normalizeHtml(flashcardHtml);
-				const normalizedAnkiHtml = this.normalizeHtml(ankiHtml);
-				
-				if (normalizedFlashcardHtml !== normalizedAnkiHtml) {
+				// Direct HTML comparison
+				if (flashcardHtml !== ankiHtml) {
 					console.log(`Field mismatch in ${fieldName}:`, {
-						obsidian: normalizedFlashcardHtml,
-						anki: normalizedAnkiHtml
+						obsidian: flashcardHtml,
+						anki: ankiHtml
 					});
 					return false;
 				}
@@ -347,13 +344,6 @@ export class SyncProgressModal extends Modal {
 		}
 	}
 
-	private normalizeHtml(html: string): string {
-		// Simple HTML normalization for comparison
-		return html
-			.trim()
-			.replace(/\s+/g, ' ') // Normalize whitespace
-			.replace(/>\s+</g, '><'); // Remove whitespace between tags
-	}
 
 	private validateFlashcard(flashcard: Flashcard): string | null {
 		// Check if note type exists in available note types
