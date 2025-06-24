@@ -97,11 +97,21 @@ export class FlashcardCodeBlockProcessor {
 				cls: 'flashcard-error-icon',
 				text: 'ⓘ'
 			});
-			errorIcon.setAttribute('title', flashcard.error || 'Unknown parsing error');
 			
 			const errorTitle = errorHeader.createEl('span', { 
 				cls: 'flashcard-error-title',
 				text: 'Invalid Flashcard'
+			});
+			
+			// Create error message that appears inside the header on click
+			const errorMessage = errorHeader.createEl('div', { 
+				cls: 'flashcard-error-message',
+				text: flashcard.error || 'Unknown parsing error'
+			});
+			
+			errorIcon.addEventListener('click', () => {
+				const isVisible = errorMessage.style.display !== 'none';
+				errorMessage.style.display = isVisible ? 'none' : 'block';
 			});
 			
 			// Original code block content

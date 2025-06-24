@@ -152,6 +152,14 @@ If your plugin does not need CSS, delete this file.
     color: var(--text-error);
 }
 
+.flashcard-error-message {
+    display: none;
+    color: var(--text-error);
+    margin-top: 8px;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
 .flashcard-error-content {
     margin: 0;
     background: var(--background-secondary);
