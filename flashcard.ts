@@ -1,17 +1,23 @@
 import * as yaml from 'js-yaml';
 
-export interface FlashcardData {
+// Base interface for all flashcard-related objects
+export interface FlashcardBlock {
 	sourcePath: string;
+	lineStart: number;
+	lineEnd: number;
+}
+
+// Valid flashcard with parsed content
+export interface Flashcard extends FlashcardBlock {
 	noteType: string;
 	ankiId?: number;  // Missing for new, yet to be synced cards
 	tags: string[];
 	contentFields: Record<string, string>;
 }
 
-
-export interface FlashcardParseResult {
-	data?: FlashcardData;
-	error?: string;
+// Invalid flashcard with parsing error
+export interface InvalidFlashcard extends FlashcardBlock {
+	error: string;
 }
 
 export const METADATA_FIELDS = ['note_type', 'anki_id', 'tags'];
@@ -29,11 +35,11 @@ export class FlashcardFieldRenderer {
 		return tags.slice().sort().join(',');
 	}
 	
-	static renderFlashcardFields(flashcardData: FlashcardData): Record<string, string> {
+	static renderFlashcardFields(flashcard: Flashcard): Record<string, string> {
 		const renderedFields: Record<string, string> = {};
 		
 		// Render all content fields
-		for (const [fieldName, fieldValue] of Object.entries(flashcardData.contentFields)) {
+		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
 			renderedFields[fieldName] = this.renderFieldToText(fieldValue);
 		}
 		
@@ -46,7 +52,7 @@ export class BlockFlashcardParser {
 		return typeof data === 'object' && data !== null && !Array.isArray(data);
 	}
 
-	static parseFlashcard(source: string, sourcePath: string): FlashcardParseResult {
+	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number): Flashcard | InvalidFlashcard {
 		try {
 			// Trim whitespace
 			const trimmedSource = source.trim();
@@ -54,6 +60,9 @@ export class BlockFlashcardParser {
 			// Check for empty content
 			if (!trimmedSource) {
 				return {
+					sourcePath,
+					lineStart,
+					lineEnd,
 					error: 'No content found in flashcard block'
 				};
 			}
@@ -64,6 +73,9 @@ export class BlockFlashcardParser {
 			// Validate that we got an object
 			if (!this.isValidFlashcardData(rawData)) {
 				return {
+					sourcePath,
+					lineStart,
+					lineEnd,
 					error: 'Flashcard content must be a YAML object with key-value pairs'
 				};
 			}
@@ -75,6 +87,9 @@ export class BlockFlashcardParser {
 			if ('tags' in data && data.tags !== undefined) {
 				if (!Array.isArray(data.tags)) {
 					return {
+						sourcePath,
+						lineStart,
+						lineEnd,
 						error: 'Tags field must be a YAML list of strings. Use:\ntags:\n  - tag1\n  - tag2'
 					};
 				}
@@ -85,6 +100,9 @@ export class BlockFlashcardParser {
 					const tag = tags[i];
 					if (typeof tag !== 'string' || tag.trim().length === 0) {
 						return {
+							sourcePath,
+							lineStart,
+							lineEnd,
 							error: `Tag at position ${i + 1} must be a non-empty string`
 						};
 					}
@@ -107,6 +125,9 @@ export class BlockFlashcardParser {
 						contentFields[key] = String(value);
 					} else {
 						return {
+							sourcePath,
+							lineStart,
+							lineEnd,
 							error: `Field '${key}' must be a string, number, boolean, or null. Arrays and objects are not supported for content fields.`
 						};
 					}
@@ -116,13 +137,18 @@ export class BlockFlashcardParser {
 			
 			if (!hasContentFields) {
 				return {
+					sourcePath,
+					lineStart,
+					lineEnd,
 					error: 'Flashcard must contain at least one content field (e.g., front, back, question, answer)'
 				};
 			}
 
-			// Construct FlashcardData with proper structure and mandatory defaults
-			const flashcardData: FlashcardData = {
+			// Construct Flashcard with proper structure and mandatory defaults
+			const flashcard: Flashcard = {
 				sourcePath,
+				lineStart,
+				lineEnd,
 				noteType: ('note_type' in data && typeof data.note_type === 'string') 
 					? data.note_type 
 					: DEFAULT_NOTE_TYPE,
@@ -136,32 +162,44 @@ export class BlockFlashcardParser {
 			if ('anki_id' in data && data.anki_id !== undefined && data.anki_id !== null) {
 				// Handle anki_id as number, string, or numeric string
 				if (typeof data.anki_id === 'number') {
-					flashcardData.ankiId = data.anki_id;
+					flashcard.ankiId = data.anki_id;
 				} else if (typeof data.anki_id === 'string') {
 					const parsedId = Number(data.anki_id);
 					if (Number.isInteger(parsedId) && parsedId > 0) {
-						flashcardData.ankiId = parsedId;
+						flashcard.ankiId = parsedId;
 					} else {
 						return {
+							sourcePath,
+							lineStart,
+							lineEnd,
 							error: `anki_id must be a positive integer, got: ${data.anki_id}`
 						};
 					}
 				} else {
 					return {
+						sourcePath,
+						lineStart,
+						lineEnd,
 						error: `anki_id must be a number or numeric string, got: ${typeof data.anki_id}`
 					};
 				}
 			}
 
-			return { data: flashcardData };
+			return flashcard;
 		} catch (error) {
 			if (error instanceof yaml.YAMLException) {
 				return {
+					sourcePath,
+					lineStart,
+					lineEnd,
 					error: `YAML parsing error: ${error.message}`
 				};
 			}
 			
 			return {
+				sourcePath,
+				lineStart,
+				lineEnd,
 				error: `Parsing error: ${error instanceof Error ? error.message : String(error)}`
 			};
 		}

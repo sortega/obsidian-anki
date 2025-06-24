@@ -1,12 +1,12 @@
 import { MarkdownRenderChild, MarkdownRenderer, MarkdownPostProcessorContext } from 'obsidian';
-import { FlashcardData, BlockFlashcardParser } from './flashcard';
+import { Flashcard, InvalidFlashcard, BlockFlashcardParser } from './flashcard';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
-	private flashcardData: FlashcardData;
+	private flashcard: Flashcard;
 
-	constructor(containerEl: HTMLElement, flashcardData: FlashcardData) {
+	constructor(containerEl: HTMLElement, flashcard: Flashcard) {
 		super(containerEl);
-		this.flashcardData = flashcardData;
+		this.flashcard = flashcard;
 	}
 
 	onload() {
@@ -21,12 +21,12 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Header with note type
 		const header = containerEl.createEl('div', { cls: 'flashcard-header' });
 		header.createEl('span', { 
-			text: `Note Type: ${this.flashcardData.noteType}`,
+			text: `Note Type: ${this.flashcard.noteType}`,
 			cls: 'flashcard-note-type'
 		});
 
 		// Add NEW indicator if flashcard hasn't been synced yet
-		if (!this.flashcardData.ankiId) {
+		if (!this.flashcard.ankiId) {
 			header.createEl('span', { 
 				text: 'NEW',
 				cls: 'flashcard-new-indicator'
@@ -37,7 +37,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
 		// Render all content fields
-		for (const [fieldName, fieldValue] of Object.entries(this.flashcardData.contentFields)) {
+		for (const [fieldName, fieldValue] of Object.entries(this.flashcard.contentFields)) {
 			const fieldContainer = content.createEl('div', { cls: 'flashcard-field' });
 			
 			// Field label
@@ -50,11 +50,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			const fieldContentEl = fieldContainer.createEl('div', { cls: 'flashcard-field-content' });
 			
 			// Render markdown content
-			MarkdownRenderer.renderMarkdown(fieldValue, fieldContentEl, this.flashcardData.sourcePath, this);
+			MarkdownRenderer.renderMarkdown(fieldValue, fieldContentEl, this.flashcard.sourcePath, this);
 		}
 
 		// Footer with tags if present (filter out obsidian-* internal tags)
-		const visibleTags = this.flashcardData.tags.filter(tag => !tag.startsWith('obsidian-'));
+		const visibleTags = this.flashcard.tags.filter((tag: string) => !tag.startsWith('obsidian-'));
 		if (visibleTags.length > 0) {
 			const footer = containerEl.createEl('div', { cls: 'flashcard-footer' });
 			const tagsLabel = footer.createEl('span', { 
@@ -75,12 +75,10 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 
 export class FlashcardCodeBlockProcessor {
 	static render(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
-		const parseResult = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath);
+		// Parse flashcard with line positions - we don't have exact line positions here, so use 0
+		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, 0, 0);
 		
-		if (parseResult.data) {
-			const renderer = new FlashcardRenderer(el, parseResult.data);
-			ctx.addChild(renderer);
-		} else {
+		if ('error' in flashcard) {
 			// If parsing fails, show error UI with original code block
 			el.addClass('flashcard-error');
 			
@@ -90,7 +88,7 @@ export class FlashcardCodeBlockProcessor {
 				cls: 'flashcard-error-icon',
 				text: 'ⓘ'
 			});
-			errorIcon.setAttribute('title', parseResult.error || 'Unknown parsing error');
+			errorIcon.setAttribute('title', flashcard.error || 'Unknown parsing error');
 			
 			const errorTitle = errorHeader.createEl('span', { 
 				cls: 'flashcard-error-title',
@@ -102,6 +100,10 @@ export class FlashcardCodeBlockProcessor {
 			const code = codeEl.createEl('code');
 			code.textContent = source;
 			code.className = 'language-yaml';
+		} else {
+			// Valid flashcard - render it
+			const renderer = new FlashcardRenderer(el, flashcard);
+			ctx.addChild(renderer);
 		}
 	}
 }

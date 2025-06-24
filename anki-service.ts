@@ -1,5 +1,5 @@
 import { YankiConnect } from 'yanki-connect';
-import { FlashcardData } from './flashcard';
+import { Flashcard } from './flashcard';
 
 // Domain types for Anki data structures
 export interface AnkiNoteField {
@@ -93,9 +93,9 @@ export class YankiConnectAnkiService implements AnkiService {
 // Utility functions for converting between Anki and Obsidian data formats
 export class AnkiDataConverter {
 	/**
-	 * Converts an AnkiNote to FlashcardData format
+	 * Converts an AnkiNote to Flashcard format
 	 */
-	static toFlashcardData(ankiNote: AnkiNote, noteType: string): FlashcardData {
+	static toFlashcard(ankiNote: AnkiNote, noteType: string): Flashcard {
 		const contentFields: Record<string, string> = {};
 		
 		// Convert Anki fields to content fields
@@ -109,11 +109,13 @@ export class AnkiDataConverter {
 		const sourcePath = obsidianFileTag ? obsidianFileTag.replace('obsidian-file::', '') : '';
 		
 		return {
+			sourcePath: sourcePath,
+			lineStart: 0, // We don't have line info for Anki notes
+			lineEnd: 0,
 			noteType: noteType,
 			contentFields: contentFields,
 			tags: ankiNote.tags || [],
-			ankiId: ankiNote.noteId,
-			sourcePath: sourcePath
+			ankiId: ankiNote.noteId
 		};
 	}
 }
