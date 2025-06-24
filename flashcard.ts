@@ -2,10 +2,10 @@ import * as yaml from 'js-yaml';
 
 export interface FlashcardData {
 	sourcePath: string;
-	note_type: string;
-	anki_id?: number;  // Missing for new, yet to be synced cards
+	noteType: string;
+	ankiId?: number;  // Missing for new, yet to be synced cards
 	tags: string[];
-	content_fields: Record<string, string>;
+	contentFields: Record<string, string>;
 }
 
 
@@ -33,7 +33,7 @@ export class FlashcardFieldRenderer {
 		const renderedFields: Record<string, string> = {};
 		
 		// Render all content fields
-		for (const [fieldName, fieldValue] of Object.entries(flashcardData.content_fields)) {
+		for (const [fieldName, fieldValue] of Object.entries(flashcardData.contentFields)) {
 			renderedFields[fieldName] = this.renderFieldToText(fieldValue);
 		}
 		
@@ -123,24 +123,24 @@ export class BlockFlashcardParser {
 			// Construct FlashcardData with proper structure and mandatory defaults
 			const flashcardData: FlashcardData = {
 				sourcePath,
-				note_type: ('note_type' in data && typeof data.note_type === 'string') 
+				noteType: ('note_type' in data && typeof data.note_type === 'string') 
 					? data.note_type 
 					: DEFAULT_NOTE_TYPE,
 				tags: ('tags' in data && Array.isArray(data.tags)) 
 					? data.tags as string[] 
 					: [],
-				content_fields: contentFields
+				contentFields: contentFields
 			};
 			
 			// Add optional metadata fields
 			if ('anki_id' in data && data.anki_id !== undefined && data.anki_id !== null) {
 				// Handle anki_id as number, string, or numeric string
 				if (typeof data.anki_id === 'number') {
-					flashcardData.anki_id = data.anki_id;
+					flashcardData.ankiId = data.anki_id;
 				} else if (typeof data.anki_id === 'string') {
 					const parsedId = Number(data.anki_id);
 					if (Number.isInteger(parsedId) && parsedId > 0) {
-						flashcardData.anki_id = parsedId;
+						flashcardData.ankiId = parsedId;
 					} else {
 						return {
 							error: `anki_id must be a positive integer, got: ${data.anki_id}`

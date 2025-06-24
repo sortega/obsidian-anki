@@ -21,12 +21,12 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Header with note type
 		const header = containerEl.createEl('div', { cls: 'flashcard-header' });
 		header.createEl('span', { 
-			text: `Note Type: ${this.flashcardData.note_type}`,
+			text: `Note Type: ${this.flashcardData.noteType}`,
 			cls: 'flashcard-note-type'
 		});
 
 		// Add NEW indicator if flashcard hasn't been synced yet
-		if (!this.flashcardData.anki_id) {
+		if (!this.flashcardData.ankiId) {
 			header.createEl('span', { 
 				text: 'NEW',
 				cls: 'flashcard-new-indicator'
@@ -37,7 +37,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
 		// Render all content fields
-		for (const [fieldName, fieldValue] of Object.entries(this.flashcardData.content_fields)) {
+		for (const [fieldName, fieldValue] of Object.entries(this.flashcardData.contentFields)) {
 			const fieldContainer = content.createEl('div', { cls: 'flashcard-field' });
 			
 			// Field label
@@ -53,15 +53,16 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			MarkdownRenderer.renderMarkdown(fieldValue, fieldContentEl, this.flashcardData.sourcePath, this);
 		}
 
-		// Footer with tags if present
-		if (this.flashcardData.tags.length > 0) {
+		// Footer with tags if present (filter out obsidian-* internal tags)
+		const visibleTags = this.flashcardData.tags.filter(tag => !tag.startsWith('obsidian-'));
+		if (visibleTags.length > 0) {
 			const footer = containerEl.createEl('div', { cls: 'flashcard-footer' });
 			const tagsLabel = footer.createEl('span', { 
 				text: 'Tags: ',
 				cls: 'flashcard-tags-label'
 			});
 			const tagsContent = footer.createEl('span', { 
-				text: this.flashcardData.tags.join(', '),
+				text: visibleTags.join(', '),
 				cls: 'flashcard-tags-content'
 			});
 		}
