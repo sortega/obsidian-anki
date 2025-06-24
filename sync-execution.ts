@@ -3,6 +3,7 @@ import { AnkiService } from './anki-service';
 import { Flashcard } from './flashcard';
 import { SyncAnalysis } from './sync-analysis';
 import { MarkdownService } from './markdown-service';
+import * as yaml from 'js-yaml';
 
 export class SyncExecutionModal extends Modal {
 	private analysis: SyncAnalysis;
@@ -221,7 +222,7 @@ export class SyncExecutionModal extends Modal {
 		
 		try {
 			// Add anki_id to the YAML content
-			const updatedYaml = this.insertAnkiIdInYaml(yamlContent, noteId);
+			const updatedYaml = this.upsertAnkiIdInYaml(yamlContent, noteId);
 			
 			// Replace the lines
 			const newLines = [...lines];
@@ -234,25 +235,15 @@ export class SyncExecutionModal extends Modal {
 		}
 	}
 
-	private insertAnkiIdInYaml(yamlContent: string, noteId: number): string {
-		const lines = yamlContent.split('\n');
-		
-		// Find where to insert anki_id (after note_type if it exists, otherwise at the beginning)
-		let insertIndex = 0;
-		
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i].trim();
-			if (line.startsWith('note_type:')) {
-				insertIndex = i + 1;
-				break;
-			}
-		}
-		
-		// Insert the anki_id line
-		const ankiIdLine = `anki_id: ${noteId}`;
-		lines.splice(insertIndex, 0, ankiIdLine);
-		
-		return lines.join('\n');
+	private upsertAnkiIdInYaml(yamlContent: string, noteId: number): string {
+		const data = yaml.load(yamlContent) as Record<string, any> || {};
+		data['anki_id'] = noteId;
+		return yaml.dump(data, {
+			indent: 2,
+			lineWidth: -1, // Disable line wrapping
+			noRefs: true,  // Don't use references
+			sortKeys: false // Preserve order
+		});
 	}
 
 	private renderFlashcardToHtml(flashcard: Flashcard): Flashcard {

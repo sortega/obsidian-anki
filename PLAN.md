@@ -12,17 +12,6 @@
 - ✅ Periodic Anki connection checking (10s intervals)
 - ✅ Note type and deck retrieval from Anki with structured data types
 
-### Current Limitations
-- ❌ Sync button performs full sync operations
-  - ✅ Finds all cards in the vault via SyncProgressModal
-  - ✅ Finds all managed cards in Anki via getManagedNoteIds()
-  - ✅ Content comparison implemented in SyncConfirmationModal
-  - ✅ Full CRUD operations for Anki cards (create, update, delete)
-  - ❌ Bug in how it updates Obsidian files with anki_id after creation
-  - ❌ No media file synchronization
-- ❌ No keyboard shortcuts for any actions
-- ❌ No cloze deletion syntax support
-
 ## Feature Roadmap
 
 ### Basic functionality
