@@ -1,4 +1,5 @@
 import * as yaml from 'js-yaml';
+import { DEFAULT_NOTE_TYPE, METADATA_FIELDS } from './constants';
 
 // Base interface for all flashcard-related objects
 export interface FlashcardBlock {
@@ -20,32 +21,6 @@ export interface InvalidFlashcard extends FlashcardBlock {
 	error: string;
 }
 
-export const METADATA_FIELDS = ['note_type', 'anki_id', 'tags'];
-export const DEFAULT_NOTE_TYPE = 'Basic';
-
-export class FlashcardFieldRenderer {
-	static renderFieldToText(fieldValue: string): string {
-		// For comparison purposes, we normalize whitespace and remove markdown formatting
-		// This is a simplified version - in a full implementation we might want to render markdown to plain text
-		return fieldValue.trim().replace(/\s+/g, ' ');
-	}
-	
-	static renderTagsToText(tags: string[]): string {
-		// Sort tags for consistent comparison
-		return tags.slice().sort().join(',');
-	}
-	
-	static renderFlashcardFields(flashcard: Flashcard): Record<string, string> {
-		const renderedFields: Record<string, string> = {};
-		
-		// Render all content fields
-		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
-			renderedFields[fieldName] = this.renderFieldToText(fieldValue);
-		}
-		
-		return renderedFields;
-	}
-}
 
 export class BlockFlashcardParser {
 	private static isValidFlashcardData(data: unknown): data is Record<string, unknown> {

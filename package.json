@@ -12,7 +12,9 @@
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
+		"@types/marked": "^5.0.2",
 		"js-yaml": "^4.1.0",
+		"marked": "^15.0.12",
 		"yanki-connect": "^1.0.0"
 	},
 	"devDependencies": {

@@ -4,8 +4,8 @@
 
 ```flashcard
 note_type: Basic
-front: What is the capital of France?
-back: Paris
+Front: What is the capital of France?
+Back: Paris
 tags:
   - geography
   - europe
@@ -15,11 +15,11 @@ tags:
 
 ```flashcard
 note_type: Basic
-front: |
+Front: |
   What is the **Pythagorean theorem**?
   
   Used in geometry for right triangles.
-back: |
+Back: |
   The formula is: `a² + b² = c²`
   
   Where:
@@ -34,7 +34,7 @@ tags:
 
 ```flashcard
 note_type: Cloze
-text: The capital of {c1::France} is {c2::Paris}.
+Text: The capital of {c1::France} is {c2::Paris}.
 tags:
   - geography
 ```
@@ -50,12 +50,12 @@ missing colons
 
 ```flashcard
 note_type: "Basic"
-front: |
+Front: |
   This is a multi-line question
   with **markdown** support
   - List item 1
   - List item 2
-back: >
+Back: >
   This is a folded string that will
   be joined into a single line with
   spaces between the lines.
@@ -74,21 +74,21 @@ tags: [test]
 
 ```flashcard
 note_type: Basic
-front: Question
-back: Answer
+Front: Question
+Back: Answer
 tags: "geography, europe"
 ```
 
 ```flashcard
 note_type: Basic
-front: Question
-back: Answer
+Front: Question
+Back: Answer
 tags: geography, europe
 ```
 
 ## Minimal Flashcard
 
 ```flashcard
-front: Simple question
-back: Simple answer
+Front: Simple question
+Back: Simple answer
 ```

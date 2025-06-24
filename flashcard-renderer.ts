@@ -1,5 +1,6 @@
-import { MarkdownRenderChild, MarkdownRenderer, MarkdownPostProcessorContext } from 'obsidian';
+import { MarkdownRenderChild, MarkdownPostProcessorContext } from 'obsidian';
 import { Flashcard, InvalidFlashcard, BlockFlashcardParser } from './flashcard';
+import { MarkdownService } from './markdown-service';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private flashcard: Flashcard;
@@ -11,6 +12,15 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 
 	onload() {
 		this.render();
+	}
+
+	// Render flashcard fields to HTML using MarkdownService
+	renderFlashcardFields(): Record<string, string> {
+		const renderedFields: Record<string, string> = {};
+		for (const [fieldName, fieldValue] of Object.entries(this.flashcard.contentFields)) {
+			renderedFields[fieldName] = MarkdownService.renderToHtml(fieldValue);
+		}
+		return renderedFields;
 	}
 
 	private render() {
@@ -36,8 +46,9 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Content area
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
-		// Render all content fields
-		for (const [fieldName, fieldValue] of Object.entries(this.flashcard.contentFields)) {
+		// Render all content fields using HTML
+		const htmlFields = this.renderFlashcardFields();
+		for (const [fieldName, htmlContent] of Object.entries(htmlFields)) {
 			const fieldContainer = content.createEl('div', { cls: 'flashcard-field' });
 			
 			// Field label
@@ -46,11 +57,9 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 				text: `${this.capitalizeFirst(fieldName)}:`
 			});
 
-			// Field content
+			// Field content - use HTML directly
 			const fieldContentEl = fieldContainer.createEl('div', { cls: 'flashcard-field-content' });
-			
-			// Render markdown content
-			MarkdownRenderer.renderMarkdown(fieldValue, fieldContentEl, this.flashcard.sourcePath, this);
+			fieldContentEl.innerHTML = htmlContent;
 		}
 
 		// Footer with tags if present (filter out obsidian-* internal tags)

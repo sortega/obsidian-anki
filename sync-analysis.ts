@@ -1,7 +1,9 @@
 import { App, Modal, Notice, CachedMetadata, TFile, MarkdownView } from 'obsidian';
-import { AnkiService, AnkiNote, AnkiDataConverter } from './anki-service';
-import { Flashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser, FlashcardFieldRenderer } from './flashcard';
-import { FlashcardRenderer } from 'flashcard-renderer';
+import { AnkiService, AnkiNote, AnkiDataConverter, AnkiNoteType } from './anki-service';
+import { Flashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser } from './flashcard';
+import { MarkdownService } from './markdown-service';
+import { FlashcardRenderer } from './flashcard-renderer';
+import { SyncExecutionModal } from './sync-execution';
 
 export interface SyncAnalysis {
 	totalFiles: number;
@@ -22,11 +24,13 @@ export class SyncProgressModal extends Modal {
 	private onComplete: (analysis: SyncAnalysis) => void;
 	private ankiService: AnkiService;
 	private vaultName: string;
+	private availableNoteTypes: AnkiNoteType[];
 
-	constructor(app: App, ankiService: AnkiService, onComplete: (analysis: SyncAnalysis) => void) {
+	constructor(app: App, ankiService: AnkiService, availableNoteTypes: AnkiNoteType[], onComplete: (analysis: SyncAnalysis) => void) {
 		super(app);
 		this.onComplete = onComplete;
 		this.ankiService = ankiService;
+		this.availableNoteTypes = availableNoteTypes;
 		this.vaultName = app.vault.getName();
 		this.analysis = {
 			totalFiles: 0,
@@ -142,7 +146,7 @@ export class SyncProgressModal extends Modal {
 							if (ankiNoteIds.includes(ankiId)) {
 								// Compare with Anki data to determine if changed
 								const ankiNoteData = this.analysis.ankiNotesData.get(ankiId);
-								if (ankiNoteData && this.compareFlashcardWithAnki(flashcard, ankiNoteData)) {
+								if (ankiNoteData && await this.compareFlashcardWithAnki(flashcard, ankiNoteData)) {
 									this.analysis.unchangedFlashcards++;
 								} else if (ankiNoteData) {
 									this.analysis.changedFlashcards.push([ankiNoteData, flashcard]);
@@ -230,7 +234,25 @@ export class SyncProgressModal extends Modal {
 						startLine + 1, // 1-indexed for user display
 						endLine + 1
 					);
-					flashcards.push(flashcard);
+					
+					// Validate flashcard if it parsed successfully
+					if (!('error' in flashcard)) {
+						const validationError = this.validateFlashcard(flashcard);
+						if (validationError) {
+							// Convert to invalid flashcard
+							const invalidFlashcard: InvalidFlashcard = {
+								sourcePath: flashcard.sourcePath,
+								lineStart: flashcard.lineStart,
+								lineEnd: flashcard.lineEnd,
+								error: validationError
+							};
+							flashcards.push(invalidFlashcard);
+						} else {
+							flashcards.push(flashcard);
+						}
+					} else {
+						flashcards.push(flashcard);
+					}
 				}
 			}
 		}
@@ -265,35 +287,54 @@ export class SyncProgressModal extends Modal {
 	
 	private compareFlashcardWithAnki(flashcard: Flashcard, ankiNoteData: AnkiNote): boolean {
 		try {
-			// Compare rendered fields
-			const flashcardFields = FlashcardFieldRenderer.renderFlashcardFields(flashcard);
+			// Render flashcard fields to HTML using MarkdownService
+			const flashcardHtmlFields: Record<string, string> = {};
+			for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
+				flashcardHtmlFields[fieldName] = MarkdownService.renderToHtml(fieldValue);
+			}
+			
 			const ankiFields = ankiNoteData.fields || {};
 			
-			// Check if all flashcard fields match Anki fields
-			for (const [fieldName, fieldValue] of Object.entries(flashcardFields)) {
-				const ankiFieldValue = ankiFields[fieldName]?.value || '';
-				// Remove HTML tags and normalize whitespace for comparison
-				const normalizedAnkiValue = ankiFieldValue.replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
+			// Check all Anki fields (so we catch missing fields in flashcard)
+			for (const [fieldName, ankiField] of Object.entries(ankiFields)) {
+				const flashcardHtml = flashcardHtmlFields[fieldName] || '';
+				const ankiHtml = ankiField?.value || '';
 				
-				if (fieldValue !== normalizedAnkiValue) {
+				// Normalize HTML for comparison
+				const normalizedFlashcardHtml = this.normalizeHtml(flashcardHtml);
+				const normalizedAnkiHtml = this.normalizeHtml(ankiHtml);
+				
+				if (normalizedFlashcardHtml !== normalizedAnkiHtml) {
 					console.log(`Field mismatch in ${fieldName}:`, {
-						obsidian: fieldValue,
-						anki: normalizedAnkiValue
+						obsidian: normalizedFlashcardHtml,
+						anki: normalizedAnkiHtml
 					});
 					return false;
 				}
 			}
 			
-			// Compare tags
-			const flashcardTagsText = FlashcardFieldRenderer.renderTagsToText(flashcard.tags);
-			const ankiTagsText = FlashcardFieldRenderer.renderTagsToText(ankiNoteData.tags);
+			// Compare tags as sets, ignoring obsidian-* tags and order
+			const flashcardUserTags = new Set(flashcard.tags.filter(tag => !tag.startsWith('obsidian-')));
+			const ankiUserTags = new Set((ankiNoteData.tags || []).filter(tag => !tag.startsWith('obsidian-')));
 			
-			if (flashcardTagsText !== ankiTagsText) {
-				console.log('Tags mismatch:', {
-					obsidian: flashcardTagsText,
-					anki: ankiTagsText
+			// Check if sets are equal (same tags, ignore order)
+			if (flashcardUserTags.size !== ankiUserTags.size) {
+				console.log('Tags mismatch (different count):', {
+					obsidian: Array.from(flashcardUserTags),
+					anki: Array.from(ankiUserTags)
 				});
 				return false;
+			}
+			
+			for (const tag of flashcardUserTags) {
+				if (!ankiUserTags.has(tag)) {
+					console.log('Tags mismatch (missing tag):', {
+						obsidian: Array.from(flashcardUserTags),
+						anki: Array.from(ankiUserTags),
+						missingTag: tag
+					});
+					return false;
+				}
 			}
 			
 			// If we reach here, all fields and tags match
@@ -306,6 +347,39 @@ export class SyncProgressModal extends Modal {
 		}
 	}
 
+	private normalizeHtml(html: string): string {
+		// Simple HTML normalization for comparison
+		return html
+			.trim()
+			.replace(/\s+/g, ' ') // Normalize whitespace
+			.replace(/>\s+</g, '><'); // Remove whitespace between tags
+	}
+
+	private validateFlashcard(flashcard: Flashcard): string | null {
+		// Check if note type exists in available note types
+		const noteType = this.availableNoteTypes.find(nt => nt.name === flashcard.noteType);
+		if (!noteType) {
+			return `Unknown note type: '${flashcard.noteType}'. Available note types: ${this.availableNoteTypes.map(nt => nt.name).join(', ')}`;
+		}
+		
+		// Check if all flashcard fields exist in the note type
+		const availableFields = noteType.fields;
+		const flashcardFields = Object.keys(flashcard.contentFields);
+		
+		for (const fieldName of flashcardFields) {
+			if (!availableFields.includes(fieldName)) {
+				return `Unknown field '${fieldName}' for note type '${flashcard.noteType}'. Available fields: ${availableFields.join(', ')}`;
+			}
+		}
+		
+		// Check if note type has required fields and we have content for at least one
+		if (flashcardFields.length === 0) {
+			return `No content fields found. Note type '${flashcard.noteType}' has fields: ${availableFields.join(', ')}`;
+		}
+		
+		return null; // Valid flashcard
+	}
+
 	private updateProgress(progress: number, statusText: string) {
 		const percentage = Math.round(progress * 100);
 		this.progressBar.style.width = `${percentage}%`;
@@ -316,10 +390,16 @@ export class SyncProgressModal extends Modal {
 
 export class SyncConfirmationModal extends Modal {
 	private analysis: SyncAnalysis;
+	private ankiService: AnkiService;
+	private settings: { defaultDeck: string };
+	private vaultName: string;
 
-	constructor(app: App, analysis: SyncAnalysis) {
+	constructor(app: App, analysis: SyncAnalysis, ankiService: AnkiService, settings: { defaultDeck: string }) {
 		super(app);
 		this.analysis = analysis;
+		this.ankiService = ankiService;
+		this.settings = settings;
+		this.vaultName = app.vault.getName();
 	}
 
 	onOpen() {
@@ -522,10 +602,20 @@ export class SyncConfirmationModal extends Modal {
 		console.groupEnd();
 	}
 
-	private applyChanges() {
-		console.log('🚀 Apply Changes clicked - would sync to Anki here');
-		new Notice('Sync functionality not yet implemented - check console for analysis');
+	private async applyChanges() {
+		console.log('🚀 Apply Changes clicked - starting sync to Anki');
+		
+		// Show sync execution modal
+		const syncExecutionModal = new SyncExecutionModal(
+			this.app, 
+			this.analysis, 
+			this.ankiService, 
+			this.settings.defaultDeck,
+			this.vaultName
+		);
+		
 		this.close();
+		syncExecutionModal.open();
 	}
 
 	private createNewFlashcardsSection(container: HTMLElement) {

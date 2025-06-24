@@ -13,16 +13,16 @@
 - ✅ Note type and deck retrieval from Anki with structured data types
 
 ### Current Limitations
-- 🔄 Sync button exists but performs no actual syncing
+- ❌ Sync button performs full sync operations
   - ✅ Finds all cards in the vault via SyncProgressModal
   - ✅ Finds all managed cards in Anki via getManagedNoteIds()
   - ✅ Content comparison implemented in SyncConfirmationModal
-  - ❌ No actual syncing to Anki (shows "not yet implemented" message)
+  - ✅ Full CRUD operations for Anki cards (create, update, delete)
+  - ❌ Buggy creation and update of cards
+  - ❌ Bug in how it updates Obsidian files with anki_id after creation
+  - ❌ No media file synchronization
 - ❌ No keyboard shortcuts for any actions
-- ❌ No progress tracking for sync operations
-- ❌ No media file synchronization
 - ❌ No cloze deletion syntax support
-- ❌ No bidirectional sync capability
 
 ## Feature Roadmap
 
@@ -135,7 +135,9 @@ tags:
 1. ✅ Implement sync progress modal UI
 2. ✅ Add file scanning and flashcard parsing logic  
 3. ✅ Create Anki comparison functionality
-4. ❌ Add basic CRUD operations for Anki cards (NEXT PRIORITY)
+4. ✅ Add basic CRUD operations for Anki cards
+5. ✅ Implement sync execution with progress tracking
+6. ✅ Add default deck configuration in settings
 
 ### Short Term (2-3 Sprints)
 1. Add keyboard shortcuts and commands

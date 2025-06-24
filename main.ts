@@ -2,25 +2,28 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import { AnkiService, YankiConnectAnkiService, AnkiNoteType } from './anki-service';
 import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
 import { FlashcardCodeBlockProcessor } from './flashcard-renderer';
-import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-modal';
+import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-analysis';
+import { DEFAULT_NOTE_TYPE, DEFAULT_DECK } from './constants';
 
 // Remember to rename these classes and interfaces!
 
 interface PluginSettings {
 	lastUsedNoteType: string;
 	availableNoteTypes: AnkiNoteType[];
+	defaultDeck: string;
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
-	lastUsedNoteType: 'Basic',
-	availableNoteTypes: []
+	lastUsedNoteType: DEFAULT_NOTE_TYPE,
+	availableNoteTypes: [],
+	defaultDeck: DEFAULT_DECK
 }
 
 export default class ObsidianAnkiPlugin extends Plugin {
 	settings: PluginSettings;
 	private ankiService: AnkiService;
 	private ankiStatusBar: HTMLElement;
-	private availableDecks: string[] = [];
+	availableDecks: string[] = []; // Made public for settings tab access
 	private insertFlashcardButton: HTMLElement;
 
 	async onload() {
@@ -152,7 +155,13 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			
 			this.availableDecks = deckNames;
 
-			// Save note types to settings
+			// Check if current default deck is still valid, if not reset to DEFAULT_DECK
+			if (deckNames.length > 0 && !deckNames.includes(this.settings.defaultDeck)) {
+				console.warn(`Default deck '${this.settings.defaultDeck}' not found in Anki. Resetting to '${DEFAULT_DECK}'.`);
+				this.settings.defaultDeck = deckNames.includes(DEFAULT_DECK) ? DEFAULT_DECK : deckNames[0];
+			}
+
+			// Save note types and deck validation to settings
 			this.settings.availableNoteTypes = noteTypes;
 			await this.saveSettings();
 
@@ -195,9 +204,9 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	private async startSyncProcess() {
 		try {
 			// Show progress modal and start scanning
-			const progressModal = new SyncProgressModal(this.app, this.ankiService, (analysis: SyncAnalysis) => {
+			const progressModal = new SyncProgressModal(this.app, this.ankiService, this.settings.availableNoteTypes, (analysis: SyncAnalysis) => {
 				// When scanning is complete, show confirmation modal
-				new SyncConfirmationModal(this.app, analysis).open();
+				new SyncConfirmationModal(this.app, analysis, this.ankiService, this.settings).open();
 			});
 			progressModal.open();
 		} catch (error) {
@@ -235,6 +244,34 @@ class ObsidianAnkiSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
+
+		// Default Deck setting
+		const deckSetting = new Setting(containerEl)
+			.setName('Default Deck')
+			.setDesc('The deck where new flashcards will be created in Anki');
+
+		if (this.plugin.availableDecks && this.plugin.availableDecks.length > 0) {
+			// Use dropdown when deck information is available
+			deckSetting.addDropdown(dropdown => dropdown
+				.addOptions(this.plugin.availableDecks.reduce((options, deck) => {
+					options[deck] = deck;
+					return options;
+				}, {} as Record<string, string>))
+				.setValue(this.plugin.settings.defaultDeck)
+				.onChange(async (value) => {
+					this.plugin.settings.defaultDeck = value;
+					await this.plugin.saveSettings();
+				}));
+		} else {
+			// Fallback to text input when no deck information is available
+			deckSetting.addText(text => text
+				.setPlaceholder(DEFAULT_DECK)
+				.setValue(this.plugin.settings.defaultDeck)
+				.onChange(async (value) => {
+					this.plugin.settings.defaultDeck = value || DEFAULT_DECK;
+					await this.plugin.saveSettings();
+				}));
+		}
 
 		// Available Note Types section
 		const hasNoteTypes = this.plugin.settings.availableNoteTypes.length > 0;
