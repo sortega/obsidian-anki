@@ -7,14 +7,12 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 ### Current
 - 📝 **Insert Flashcards**: Create flashcards using a simple code block syntax
 - 🔗 **Anki Integration**: Connect to Anki via AnkiConnect addon
-- 📊 **Status Indicator**: Real-time connection status in the status bar
+- 🎨 **Visual Rendering**: Beautiful flashcard display in reading mode
 - ⚙️ **Settings Management**: Configure note types and manage cached data
 - 🎯 **Note Type Selection**: Choose from available Anki note types
 
 ### Coming Soon
-- 🔄 **Full Sync**: Comprehensive synchronization with progress tracking
 - ⌨️ **Keyboard Shortcuts**: Quick access to all plugin functions
-- 🎨 **Visual Rendering**: Beautiful flashcard display in reading mode
 - 🧠 **Cloze Deletion**: Specialized syntax for cloze deletion cards
 - 🖼️ **Media Sync**: Automatic syncing of images and audio files
 
