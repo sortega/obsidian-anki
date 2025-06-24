@@ -18,7 +18,6 @@
   - ✅ Finds all managed cards in Anki via getManagedNoteIds()
   - ✅ Content comparison implemented in SyncConfirmationModal
   - ✅ Full CRUD operations for Anki cards (create, update, delete)
-  - ❌ Buggy creation and update of cards
   - ❌ Bug in how it updates Obsidian files with anki_id after creation
   - ❌ No media file synchronization
 - ❌ No keyboard shortcuts for any actions
@@ -26,75 +25,25 @@
 
 ## Feature Roadmap
 
-### Phase 1: Core Sync Functionality
-**Priority: High**
-
-#### 1.1 Sync Progress Modal ✅ IMPLEMENTED
-- ✅ Create a comprehensive modal for tracking sync operations
-- ✅ Progress indicators for:
-  - ✅ File scanning phase (files processed vs total)
-  - ✅ Flashcard discovery phase (flashcards found)
-  - ✅ Anki comparison phase (comparing local vs remote cards)
-  - ❌ Change application phase (not yet implemented)
-- ✅ User confirmation dialog: "Create X cards, update Y cards, delete Z cards?"
-
-#### 1.2 Flashcard Detection & Processing ✅ IMPLEMENTED
-- ✅ Parse all markdown files for `flashcard` code blocks using MetadataCache API
-- ✅ Extract flashcard metadata (note_type, fields, existing anki_id if present)
-- ✅ Build comprehensive flashcard inventory with categorization
-
-#### 1.3 Anki Integration Strategy
-- Use tags for organization:
-  - `obsidian-synced`: Mark cards as coming from Obsidian
-  - `obsidian-vault:VAULT_NAME`: Enable multi-vault support
-  - `obsidian-file:FILE_PATH`: Enable file-level tracking
-- Implement CRUD operations:
-  - Create new cards in Anki
-  - Update existing cards
-  - Delete removed cards
-  - Add `anki_id` field to YAML front matter after creation
-
-### Phase 2: Enhanced User Experience
-**Priority: Medium**
-
-#### 2.1 Keyboard Shortcuts
-- Add configurable hotkeys for:
-  - Insert flashcard: `Ctrl+Shift+F`
-  - Sync to Anki: `Ctrl+Shift+S`
+### Basic functionality
+- Flashcard parsing warnings
+  - Warning: unknown fields
+  - Warning: invalid Anki template references
 - Register commands in Obsidian command palette
+- Hotkeys to insert flashcard and sync to anki
 
-#### 2.2 Flashcard Rendering
-- Implement live preview rendering for flashcard blocks
-- Style flashcards similar to code blocks when cursor is outside
-- Show field labels and content clearly
-- Add visual indicators for synced vs unsynced cards
-
-#### 2.3 Cloze Deletion Support
-- Create specialized syntax: `{{c1::text to hide}}`
-- Allow inline cloze cards within paragraphs
+### Cloze flashcards special treatment
+- Validate cloze markers
+- Render the note differently
+- Special syntax to embed cloze deletions within paragraphs
 - Render as highlighted text when cursor is elsewhere
-- Convert to Anki cloze format during sync
 
-### Phase 3: Advanced Features
-**Priority: Low**
+### Media syncing
+- Sync local images
+- Sync other media (low priority)
 
-#### 3.1 Media Synchronization
-- Detect local image references in flashcard content
-- Use Anki's media sync API to transfer files
-- Update references to use Anki media format
-- Support for audio files (future consideration)
-
-#### 3.2 Template System
-- HTML template generation for Anki cards
+### Other
 - Support for linking back to Obsidian notes
-- Customizable card styling
-- Field mapping configurations
-
-#### 3.3 Bidirectional Sync
-- Detect changes made in Anki
-- Prompt user for conflict resolution
-- Update Obsidian flashcards with Anki changes
-- Maintain sync state tracking
 
 ## Technical Architecture Decisions
 
