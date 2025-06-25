@@ -299,6 +299,86 @@ If your plugin does not need CSS, delete this file.
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
+/* Expandable Sections */
+.sync-expandable-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sync-expandable-section {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.sync-expandable-summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    background: var(--background-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s ease;
+}
+
+.sync-expandable-summary:hover {
+    background: var(--background-modifier-hover);
+}
+
+.sync-expandable-title {
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.sync-expandable-count {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+}
+
+.sync-expandable-section[open] .sync-expandable-summary {
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.sync-expandable-content {
+    padding: 16px;
+    background: var(--background-primary);
+}
+
+/* Expandable Stat Sections */
+.sync-expandable-stat {
+    cursor: pointer;
+}
+
+.sync-expandable-stat-summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sync-expandable-stat-summary::-webkit-details-marker {
+    display: none;
+}
+
+.sync-expandable-stat-summary::marker {
+    display: none;
+}
+
+.sync-expandable-stat[open] {
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+
+.sync-expandable-stat .sync-expandable-content {
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+}
+
 .sync-details-content {
     padding: 16px;
 }

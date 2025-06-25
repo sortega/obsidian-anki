@@ -413,46 +413,34 @@ export class SyncConfirmationModal extends Modal {
 			text: `📁 Files scanned: ${this.analysis.scannedFiles}`
 		});
 		
-		// Create flashcard category section
-		const flashcardHeader = statsContainer.createEl('div', { 
-			cls: 'sync-stat-item',
-			text: `📇 Flashcards:`
-		});
-		flashcardHeader.style.fontWeight = '600';
-		flashcardHeader.style.marginTop = '10px';
-		
+		// Create expandable statistics sections directly in the stats container
 		if (this.analysis.newFlashcards.length > 0) {
-			statsContainer.createEl('div', { 
-				cls: 'sync-stat-item sync-stat-new',
-				text: `  ➕ New: ${this.analysis.newFlashcards.length}`
+			this.createExpandableStatSection(statsContainer, '➕ New', this.analysis.newFlashcards.length, 'cards will be created', 'sync-stat-new', () => {
+				return this.createNewFlashcardsContent();
 			});
 		}
 		
 		if (this.analysis.changedFlashcards.length > 0) {
-			statsContainer.createEl('div', { 
-				cls: 'sync-stat-item sync-stat-changed',
-				text: `  📝 Changed: ${this.analysis.changedFlashcards.length}`
-			});
-		}
-		
-		if (this.analysis.unchangedFlashcards > 0) {
-			statsContainer.createEl('div', { 
-				cls: 'sync-stat-item sync-stat-unchanged',
-				text: `  ✅ Unchanged: ${this.analysis.unchangedFlashcards}`
+			this.createExpandableStatSection(statsContainer, '📝 Changed', this.analysis.changedFlashcards.length, 'cards will be updated', 'sync-stat-changed', () => {
+				return this.createChangedFlashcardsContent();
 			});
 		}
 		
 		if (this.analysis.invalidFlashcards.length > 0) {
-			statsContainer.createEl('div', { 
-				cls: 'sync-stat-item sync-stat-invalid',
-				text: `  ❌ Invalid: ${this.analysis.invalidFlashcards.length}`
+			this.createExpandableStatSection(statsContainer, '❌ Invalid', this.analysis.invalidFlashcards.length, 'cards have errors', 'sync-stat-invalid', () => {
+				return this.createInvalidFlashcardsContent();
 			});
 		}
 		
 		if (this.analysis.deletedAnkiNotes.length > 0) {
-			statsContainer.createEl('div', { 
-				cls: 'sync-stat-item sync-stat-deleted',
-				text: `  🗑️ Deleted: ${this.analysis.deletedAnkiNotes.length}`
+			this.createExpandableStatSection(statsContainer, '🗑️ Deleted', this.analysis.deletedAnkiNotes.length, 'cards will be removed', 'sync-stat-deleted', () => {
+				return this.createDeletedNotesContent();
+			});
+		}
+		
+		if (this.analysis.unchangedFlashcards > 0) {
+			this.createExpandableStatSection(statsContainer, '✅ Unchanged', this.analysis.unchangedFlashcards, 'cards are up to date', 'sync-stat-unchanged', () => {
+				return this.createUnchangedFlashcardsContent();
 			});
 		}
 
@@ -474,12 +462,10 @@ export class SyncConfirmationModal extends Modal {
 		});
 		applyButton.onclick = () => this.applyChanges();
 
-		// Show details section if there are any flashcards
+		// Show message if no flashcards found
 		const totalFlashcards = this.analysis.newFlashcards.length + this.analysis.changedFlashcards.length + 
 			this.analysis.unchangedFlashcards + this.analysis.invalidFlashcards.length;
-		if (totalFlashcards > 0) {
-			this.createDetailsSection(summarySection);
-		} else {
+		if (totalFlashcards === 0) {
 			summarySection.createEl('p', { 
 				cls: 'sync-no-flashcards',
 				text: 'No flashcard blocks found in your vault.'
@@ -492,37 +478,25 @@ export class SyncConfirmationModal extends Modal {
 		contentEl.empty();
 	}
 
-	private createDetailsSection(container: HTMLElement) {
-		const detailsSection = container.createEl('details', { cls: 'sync-details' });
-		const summary = detailsSection.createEl('summary', { text: 'View Details' });
+	private createExpandableStatSection(container: HTMLElement, label: string, count: number, description: string, cssClass: string, contentCreator: () => HTMLElement) {
+		const details = container.createEl('details', { cls: `sync-stat-item ${cssClass} sync-expandable-stat` });
+		const summary = details.createEl('summary', { cls: 'sync-expandable-stat-summary' });
 		
-		const detailsContent = detailsSection.createEl('div', { cls: 'sync-details-content' });
+		summary.createEl('span', { 
+			cls: 'sync-stat-label',
+			text: `  ${label}: ${count}`
+		});
 		
-		// New flashcards
-		if (this.analysis.newFlashcards.length > 0) {
-			this.createNewFlashcardsSection(detailsContent);
-		}
-		
-		// Changed flashcards
-		if (this.analysis.changedFlashcards.length > 0) {
-			this.createChangedFlashcardsSection(detailsContent);
-		}
-		
-		// Unchanged flashcards
-		if (this.analysis.unchangedFlashcards > 0) {
-			this.createUnchangedFlashcardsSection(detailsContent);
-		}
-		
-		// Deleted Anki notes
-		if (this.analysis.deletedAnkiNotes.length > 0) {
-			this.createDeletedNotesSection(detailsContent);
-		}
-		
-		// Invalid flashcards
-		if (this.analysis.invalidFlashcards.length > 0) {
-			this.createInvalidFlashcardsSection(detailsContent);
-		}
+		// Lazy load content when expanded
+		details.addEventListener('toggle', () => {
+			if (details.open && !details.querySelector('.sync-expandable-content')) {
+				const content = details.createEl('div', { cls: 'sync-expandable-content' });
+				const sectionContent = contentCreator();
+				content.appendChild(sectionContent);
+			}
+		});
 	}
+
 
 	private logAnalysisToConsole() {
 		console.group('🔄 Anki Sync Analysis');
@@ -611,69 +585,39 @@ export class SyncConfirmationModal extends Modal {
 		syncExecutionModal.open();
 	}
 
-	private createNewFlashcardsSection(container: HTMLElement) {
-		const section = this.createSection(container, 'New Flashcards');
+	private createNewFlashcardsContent(): HTMLElement {
+		const content = document.createElement('div');
 		
-		for (const flashcard of this.analysis.newFlashcards.slice(0, 3)) {
-			const item = this.createFlashcardItem(section, 'sync-flashcard-new');
+		for (const flashcard of this.analysis.newFlashcards.slice(0, 5)) {
+			const item = this.createFlashcardItem(content as any, 'sync-flashcard-new');
 			this.addFileReference(item, flashcard);
 			
 			this.renderFlashcard(item, flashcard);
 		}
 		
-		this.addMoreItemsIndicator(section, this.analysis.newFlashcards.length, 3);
+		this.addMoreItemsIndicator(content as any, this.analysis.newFlashcards.length, 5);
+		return content;
 	}
 
-	private createChangedFlashcardsSection(container: HTMLElement) {
-		const section = this.createSection(container, 'Changed Flashcards');
+	private createChangedFlashcardsContent(): HTMLElement {
+		const content = document.createElement('div');
 		
 		for (const [ankiNote, flashcard] of this.analysis.changedFlashcards.slice(0, 3)) {
-			const item = this.createFlashcardItem(section, 'sync-flashcard-changed');
+			const item = this.createFlashcardItem(content as any, 'sync-flashcard-changed');
 			this.addFileReference(item, flashcard);
 			
 			this.renderFlashcardDiff(item, flashcard, ankiNote);
 		}
 		
-		this.addMoreItemsIndicator(section, this.analysis.changedFlashcards.length, 3);
+		this.addMoreItemsIndicator(content as any, this.analysis.changedFlashcards.length, 3);
+		return content;
 	}
 
-	private createUnchangedFlashcardsSection(container: HTMLElement) {
-		const section = this.createSection(container, 'Unchanged Flashcards');
+	private createInvalidFlashcardsContent(): HTMLElement {
+		const content = document.createElement('div');
 		
-		// Since unchangedFlashcards is now just a count, show summary info only
-		const summary = section.createEl('div', { cls: 'sync-flashcard-item sync-flashcard-unchanged' });
-		summary.createEl('div', { 
-			cls: 'sync-flashcard-info',
-			text: `${this.analysis.unchangedFlashcards} flashcards are unchanged and will not be synced.`
-		});
-	}
-
-	private createDeletedNotesSection(container: HTMLElement) {
-		const section = this.createSection(container, 'Deleted from Anki');
-		
-		for (const ankiNote of this.analysis.deletedAnkiNotes.slice(0, 5)) {
-			const item = this.createFlashcardItem(section, 'sync-flashcard-deleted');
-			
-			// Show Anki ID instead of file reference
-			const idRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
-			idRef.createEl('span', { 
-				cls: 'sync-flashcard-file',
-				text: `Anki Note ID: ${ankiNote.noteId}`
-			});
-			
-			// Render the deleted flashcard
-			const ankiAsFlashcard = AnkiDataConverter.toFlashcard(ankiNote, ankiNote.modelName);
-			this.renderFlashcard(item, ankiAsFlashcard);
-		}
-		
-		this.addMoreItemsIndicator(section, this.analysis.deletedAnkiNotes.length, 5);
-	}
-
-	private createInvalidFlashcardsSection(container: HTMLElement) {
-		const section = this.createSection(container, 'Invalid Flashcards');
-		
-		for (const flashcard of this.analysis.invalidFlashcards.slice(0, 3)) {
-			const item = this.createFlashcardItem(section, 'sync-flashcard-invalid');
+		for (const flashcard of this.analysis.invalidFlashcards.slice(0, 5)) {
+			const item = this.createFlashcardItem(content as any, 'sync-flashcard-invalid');
 			this.addFileReference(item, flashcard);
 			
 			// Show error
@@ -687,14 +631,44 @@ export class SyncConfirmationModal extends Modal {
 			});
 		}
 		
-		this.addMoreItemsIndicator(section, this.analysis.invalidFlashcards.length, 3);
+		this.addMoreItemsIndicator(content as any, this.analysis.invalidFlashcards.length, 5);
+		return content;
 	}
 
-	private createSection(container: HTMLElement, title: string): HTMLElement {
-		const section = container.createEl('div', { cls: 'sync-section' });
-		section.createEl('h4', { text: title });
-		return section;
+	private createDeletedNotesContent(): HTMLElement {
+		const content = document.createElement('div');
+		
+		for (const ankiNote of this.analysis.deletedAnkiNotes.slice(0, 5)) {
+			const item = this.createFlashcardItem(content as any, 'sync-flashcard-deleted');
+			
+			// Show Anki ID instead of file reference
+			const idRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
+			idRef.createEl('span', { 
+				cls: 'sync-flashcard-file',
+				text: `Anki Note ID: ${ankiNote.noteId}`
+			});
+			
+			// Render the deleted flashcard
+			const ankiAsFlashcard = AnkiDataConverter.toFlashcard(ankiNote, ankiNote.modelName);
+			this.renderFlashcard(item, ankiAsFlashcard);
+		}
+		
+		this.addMoreItemsIndicator(content as any, this.analysis.deletedAnkiNotes.length, 5);
+		return content;
 	}
+
+	private createUnchangedFlashcardsContent(): HTMLElement {
+		const content = document.createElement('div');
+		
+		const summary = (content as any).createEl('div', { cls: 'sync-flashcard-item sync-flashcard-unchanged' });
+		summary.createEl('div', { 
+			cls: 'sync-flashcard-info',
+			text: `${this.analysis.unchangedFlashcards} flashcards are unchanged and will not be synced.`
+		});
+		
+		return content;
+	}
+
 
 	private createFlashcardItem(section: HTMLElement, extraClass: string): HTMLElement {
 		return section.createEl('div', { cls: `sync-flashcard-item ${extraClass}` });
