@@ -379,6 +379,108 @@ If your plugin does not need CSS, delete this file.
     border-radius: 4px;
 }
 
+/* Sync Counters */
+.sync-counters {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.sync-counter {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: var(--font-ui-small);
+    font-weight: 500;
+}
+
+.sync-counter-success {
+    background: var(--color-green);
+    color: white;
+}
+
+.sync-counter-failure {
+    background: var(--color-red);
+    color: white;
+}
+
+/* Sync Results */
+.sync-results-summary {
+    padding: 20px 0;
+}
+
+.sync-result-section {
+    margin: 16px 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+}
+
+.sync-result-success {
+    border-color: var(--color-green);
+}
+
+.sync-result-failure {
+    border-color: var(--color-red);
+}
+
+.sync-result-summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    background: var(--background-secondary);
+    font-weight: 600;
+}
+
+.sync-result-content {
+    padding: 16px;
+    background: var(--background-primary);
+}
+
+.sync-result-item {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+}
+
+.sync-result-warning {
+    color: var(--text-on-accent);
+    background: var(--color-orange);
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--color-orange);
+}
+
+.sync-result-success {
+    color: var(--color-green);
+    background: var(--background-modifier-success);
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--color-green);
+}
+
+.sync-result-location {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.sync-result-error {
+    color: var(--color-red);
+    font-size: var(--font-ui-small);
+    font-style: italic;
+    margin-left: 16px;
+}
+
+.sync-result-file-link {
+    color: var(--text-accent);
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.sync-result-file-link:hover {
+    text-decoration: underline;
+}
+
 .sync-details-content {
     padding: 16px;
 }
