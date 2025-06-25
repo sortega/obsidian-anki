@@ -1,12 +1,11 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, MarkdownPostProcessorContext } from 'obsidian';
+import { App, MarkdownView, Notice, Plugin, MarkdownPostProcessorContext } from 'obsidian';
 import { AnkiService, YankiConnectAnkiService } from './anki-service';
 import { NoteType } from './flashcard';
 import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
 import { FlashcardCodeBlockProcessor } from './flashcard-renderer';
 import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-analysis';
 import { DEFAULT_NOTE_TYPE, DEFAULT_DECK } from './constants';
-
-// Remember to rename these classes and interfaces!
+import { ObsidianAnkiSettingTab } from './setting-tab';
 
 interface PluginSettings {
 	lastUsedNoteType: string;
@@ -67,10 +66,10 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		// Connect to Anki on startup
 		await this.connectToAnki('Plugin startup');
 
-		// Connect to Anki every 10 seconds
+		// Connect to Anki every minute
 		this.registerInterval(window.setInterval(() => {
 			this.connectToAnki('Periodic check');
-		}, 10 * 1000));
+		}, 60 * 1000));
 
 		// Update button state when active view changes
 		this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
@@ -85,54 +84,8 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			FlashcardCodeBlockProcessor.render(source, el, ctx);
 		});
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObsidianAnkiSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
@@ -213,103 +166,6 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		} catch (error) {
 			console.error('Failed to start sync process:', error);
 			new Notice('Failed to start sync process');
-		}
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class ObsidianAnkiSettingTab extends PluginSettingTab {
-	plugin: ObsidianAnkiPlugin;
-
-	constructor(app: App, plugin: ObsidianAnkiPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		// Default Deck setting
-		const deckSetting = new Setting(containerEl)
-			.setName('Default Deck')
-			.setDesc('The deck where new flashcards will be created in Anki');
-
-		if (this.plugin.availableDecks && this.plugin.availableDecks.length > 0) {
-			// Use dropdown when deck information is available
-			deckSetting.addDropdown(dropdown => dropdown
-				.addOptions(this.plugin.availableDecks.reduce((options, deck) => {
-					options[deck] = deck;
-					return options;
-				}, {} as Record<string, string>))
-				.setValue(this.plugin.settings.defaultDeck)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultDeck = value;
-					await this.plugin.saveSettings();
-				}));
-		} else {
-			// Fallback to text input when no deck information is available
-			deckSetting.addText(text => text
-				.setPlaceholder(DEFAULT_DECK)
-				.setValue(this.plugin.settings.defaultDeck)
-				.onChange(async (value) => {
-					this.plugin.settings.defaultDeck = value || DEFAULT_DECK;
-					await this.plugin.saveSettings();
-				}));
-		}
-
-		// Available Note Types section
-		const hasNoteTypes = this.plugin.settings.availableNoteTypes.length > 0;
-		
-		new Setting(containerEl)
-			.setName('Anki Note Types')
-			.setDesc(hasNoteTypes 
-				? 'Note types saved from the last successful connection to Anki' 
-				: 'No note types cached yet')
-			.addButton(button => button
-				.setButtonText('Reset Cache')
-				.setDisabled(!hasNoteTypes)
-				.onClick(async () => {
-					this.plugin.settings.availableNoteTypes = [];
-					await this.plugin.saveSettings();
-					this.plugin['updateInsertFlashcardButtonState']();
-					this.display();
-				}));
-
-		if (hasNoteTypes) {
-			const noteTypesList = containerEl.createEl('div', { cls: 'cached-note-types-list' });
-			noteTypesList.style.marginLeft = '20px';
-			noteTypesList.style.marginTop = '10px';
-			
-			for (const noteType of this.plugin.settings.availableNoteTypes) {
-				const noteTypeItem = noteTypesList.createEl('div', { cls: 'note-type-item' });
-				noteTypeItem.style.marginBottom = '8px';
-				
-				const noteTypeName = noteTypeItem.createEl('strong', { text: noteType.name });
-				noteTypeName.style.display = 'block';
-				
-				const fieldsText = noteTypeItem.createEl('small', { 
-					text: `Fields: ${noteType.fields.join(', ')}`,
-					cls: 'note-type-fields'
-				});
-				fieldsText.style.color = 'var(--text-muted)';
-			}
 		}
 	}
 }
