@@ -7,4 +7,4 @@ export const DEFAULT_DECK = 'Default';
 export const OBSIDIAN_VAULT_TAG_PREFIX = 'obsidian-vault::';
 
 // Metadata fields for flashcard parsing
-export const METADATA_FIELDS = ['note_type', 'anki_id', 'tags'];
+export const METADATA_FIELDS = ['NoteType', 'AnkiId', 'Tags'];

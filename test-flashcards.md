@@ -3,10 +3,10 @@
 ## Basic Flashcard
 
 ```flashcard
-note_type: Basic
+NoteType: Basic
 Front: What is the capital of France?
 Back: Paris
-tags:
+Tags:
   - geography
   - europe
 ```
@@ -14,7 +14,7 @@ tags:
 ## Multi-line Content
 
 ```flashcard
-note_type: Basic
+NoteType: Basic
 Front: |
   What is the **Pythagorean theorem**?
   
@@ -25,7 +25,7 @@ Back: |
   Where:
   - a and b are the legs
   - c is the hypotenuse
-tags:
+Tags:
   - math
   - geometry
 ```
@@ -33,9 +33,9 @@ tags:
 ## Different Note Type
 
 ```flashcard
-note_type: Cloze
+NoteType: Cloze
 Text: The capital of {{c1::France}} is {{c2::Paris}}.
-tags:
+Tags:
   - geography
 ```
 
@@ -49,7 +49,7 @@ missing colons
 ## Advanced YAML Features
 
 ```flashcard
-note_type: "Basic"
+NoteType: "Basic"
 Front: |
   This is a multi-line question
   with **markdown** support
@@ -59,31 +59,31 @@ Back: >
   This is a folded string that will
   be joined into a single line with
   spaces between the lines.
-tags: ["math", "geometry", "advanced"]
+Tags: ["math", "geometry", "advanced"]
 ```
 
 ## Edge Cases
 
 ```flashcard
 # This should fail - no content fields
-note_type: Basic
-tags: [test]
+NoteType: Basic
+Tags: [test]
 ```
 
 ## Invalid Tag Formats (should show errors)
 
 ```flashcard
-note_type: Basic
+NoteType: Basic
 Front: Question
 Back: Answer
-tags: "geography, europe"
+Tags: "geography, europe"
 ```
 
 ```flashcard
-note_type: Basic
+NoteType: Basic
 Front: Question
 Back: Answer
-tags: geography, europe
+Tags: geography, europe
 ```
 
 ## Minimal Flashcard

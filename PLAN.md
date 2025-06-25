@@ -48,11 +48,11 @@
 
 ### Flashcard Block Format
 ```flashcard
-note_type: Basic
-anki_id: 1234567890  # Added after sync
-front: Question content
-back: Answer content
-tags: 
+NoteType: Basic
+AnkiId: 1234567890  # Added after sync
+Front: Question content
+Back: Answer content
+Tags: 
   - topic1
   - topic2
 ```

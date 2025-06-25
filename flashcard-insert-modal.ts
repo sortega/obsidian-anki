@@ -64,6 +64,6 @@ export class FlashcardInsertModal extends SuggestModal<string> {
 		const noteType = this.props.availableNoteTypes.find(nt => nt.name === noteTypeName);
 		const fields = noteType?.fields || [];
 		const fieldLines = fields.map(field => `${field}: `).join('\n');
-		return `\`\`\`flashcard\nnote_type: ${noteTypeName}\n${fieldLines}\n\`\`\``;
+		return `\`\`\`flashcard\nNoteType: ${noteTypeName}\n${fieldLines}\n\`\`\``;
 	}
 }

@@ -37,15 +37,15 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 Use the flashcard insertion button in the ribbon or create flashcard blocks manually:
 
 ```flashcard
-note_type: Basic
-front: What is the capital of France?
-back: Paris
-tags:
+NoteType: Basic
+Front: What is the capital of France?
+Back: Paris
+Tags:
   - geography
   - europe
 ```
 
-**Important**: Tags must be formatted as a YAML list using the dash syntax shown above. String formats like `tags: "geography, europe"` are not supported.
+**Important**: Tags must be formatted as a YAML list using the dash syntax shown above. String formats like `Tags: "geography, europe"` are not supported.
 
 ### Advanced Flashcard Formatting
 
@@ -53,27 +53,27 @@ The plugin supports rich markdown content within flashcards:
 
 #### Multi-line format with Markdown
 ```flashcard
-note_type: Basic
-front: |
+NoteType: Basic
+Front: |
   What is the **Pythagorean theorem**?
   
   ![triangle](triangle.png)
-back: |
+Back: |
   The formula is: `a² + b² = c²`
   
   Where:
   - a and b are the legs
   - c is the hypotenuse
-tags:
+Tags:
   - math
   - geometry
 ```
 
 ### Supported Note Types
 The plugin automatically detects your Anki note types and their fields. Common formats include:
-- **Basic**: front, back
-- **Basic (and reversed card)**: front, back
-- **Cloze**: text
+- **Basic**: Front, Back
+- **Basic (and reversed card)**: Front, Back
+- **Cloze**: Text
 - **Custom note types**: Any fields you've defined
 
 ### Syncing to Anki

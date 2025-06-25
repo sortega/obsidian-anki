@@ -48,15 +48,15 @@ The plugin follows hexagonal architecture principles with clean separation betwe
 The plugin uses YAML-formatted code blocks for flashcards:
 
 ```flashcard
-note_type: Basic
-front: Question content
-back: Answer content
-tags:
+NoteType: Basic
+Front: Question content
+Back: Answer content
+Tags:
   - topic1
   - topic2
 ```
 
-**Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `tags: "topic1, topic2"` are not supported and will cause parsing errors.
+**Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `Tags: "topic1, topic2"` are not supported and will cause parsing errors.
 
 ## Flashcard Rendering
 

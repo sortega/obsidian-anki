@@ -65,18 +65,18 @@ export class BlockFlashcardParser {
 			const data: Record<string, unknown> = { ...rawData };
 
 			// Validate tags field - must be an array of strings if present
-			if ('tags' in data && data.tags !== undefined) {
-				if (!Array.isArray(data.tags)) {
+			if ('Tags' in data && data.Tags !== undefined) {
+				if (!Array.isArray(data.Tags)) {
 					return {
 						sourcePath,
 						lineStart,
 						lineEnd,
-						error: 'Tags field must be a YAML list of strings. Use:\ntags:\n  - tag1\n  - tag2'
+						error: 'Tags field must be a YAML list of strings. Use:\nTags:\n  - tag1\n  - tag2'
 					};
 				}
 				
 				// Ensure all tags are non-empty strings
-				const tags = data.tags;
+				const tags = data.Tags;
 				for (let i = 0; i < tags.length; i++) {
 					const tag = tags[i];
 					if (typeof tag !== 'string' || tag.trim().length === 0) {
@@ -127,8 +127,8 @@ export class BlockFlashcardParser {
 
 			// Add backlink fields if they don't exist and the note type supports them
 			if (vaultName && availableNoteTypes) {
-				const noteTypeName = ('note_type' in data && typeof data.note_type === 'string') 
-					? data.note_type 
+				const noteTypeName = ('NoteType' in data && typeof data.NoteType === 'string') 
+					? data.NoteType 
 					: DEFAULT_NOTE_TYPE;
 				
 				const noteType = availableNoteTypes.find(nt => nt.name === noteTypeName);
@@ -150,22 +150,22 @@ export class BlockFlashcardParser {
 				sourcePath,
 				lineStart,
 				lineEnd,
-				noteType: ('note_type' in data && typeof data.note_type === 'string') 
-					? data.note_type 
+				noteType: ('NoteType' in data && typeof data.NoteType === 'string') 
+					? data.NoteType 
 					: DEFAULT_NOTE_TYPE,
-				tags: ('tags' in data && Array.isArray(data.tags)) 
-					? data.tags as string[] 
+				tags: ('Tags' in data && Array.isArray(data.Tags)) 
+					? data.Tags as string[] 
 					: [],
 				contentFields: contentFields
 			};
 			
 			// Add optional metadata fields
-			if ('anki_id' in data && data.anki_id !== undefined && data.anki_id !== null) {
-				// Handle anki_id as number, string, or numeric string
-				if (typeof data.anki_id === 'number') {
-					flashcard.ankiId = data.anki_id;
-				} else if (typeof data.anki_id === 'string') {
-					const parsedId = Number(data.anki_id);
+			if ('AnkiId' in data && data.AnkiId !== undefined && data.AnkiId !== null) {
+				// Handle AnkiId as number, string, or numeric string
+				if (typeof data.AnkiId === 'number') {
+					flashcard.ankiId = data.AnkiId;
+				} else if (typeof data.AnkiId === 'string') {
+					const parsedId = Number(data.AnkiId);
 					if (Number.isInteger(parsedId) && parsedId > 0) {
 						flashcard.ankiId = parsedId;
 					} else {
@@ -173,7 +173,7 @@ export class BlockFlashcardParser {
 							sourcePath,
 							lineStart,
 							lineEnd,
-							error: `anki_id must be a positive integer, got: ${data.anki_id}`
+							error: `AnkiId must be a positive integer, got: ${data.AnkiId}`
 						};
 					}
 				} else {
@@ -181,7 +181,7 @@ export class BlockFlashcardParser {
 						sourcePath,
 						lineStart,
 						lineEnd,
-						error: `anki_id must be a number or numeric string, got: ${typeof data.anki_id}`
+						error: `AnkiId must be a number or numeric string, got: ${typeof data.AnkiId}`
 					};
 				}
 			}

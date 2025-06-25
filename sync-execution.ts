@@ -237,7 +237,7 @@ export class SyncExecutionModal extends Modal {
 
 	private upsertAnkiIdInYaml(yamlContent: string, noteId: number): string {
 		const data = yaml.load(yamlContent) as Record<string, any> || {};
-		data['anki_id'] = noteId;
+		data['AnkiId'] = noteId;
 		return yaml.dump(data, {
 			indent: 2,
 			lineWidth: -1, // Disable line wrapping
