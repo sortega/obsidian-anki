@@ -1,6 +1,12 @@
 import * as yaml from 'js-yaml';
 import { DEFAULT_NOTE_TYPE, METADATA_FIELDS } from './constants';
 
+// Note type definition for flashcard templates
+export interface NoteType {
+	name: string;
+	fields: string[];
+}
+
 // Base interface for all flashcard-related objects
 export interface FlashcardBlock {
 	sourcePath: string;
@@ -27,7 +33,7 @@ export class BlockFlashcardParser {
 		return typeof data === 'object' && data !== null && !Array.isArray(data);
 	}
 
-	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number): Flashcard | InvalidFlashcard {
+	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, vaultName?: string, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
 		try {
 			// Trim whitespace
 			const trimmedSource = source.trim();
@@ -117,6 +123,26 @@ export class BlockFlashcardParser {
 					lineEnd,
 					error: 'Flashcard must contain at least one content field (e.g., front, back, question, answer)'
 				};
+			}
+
+			// Add backlink fields if they don't exist and the note type supports them
+			if (vaultName && availableNoteTypes) {
+				const noteTypeName = ('note_type' in data && typeof data.note_type === 'string') 
+					? data.note_type 
+					: DEFAULT_NOTE_TYPE;
+				
+				const noteType = availableNoteTypes.find(nt => nt.name === noteTypeName);
+				if (noteType) {
+					// Add ObsidianVault field if missing and note type has it
+					if (noteType.fields.includes('ObsidianVault') && !('ObsidianVault' in contentFields)) {
+						contentFields['ObsidianVault'] = vaultName;
+					}
+					
+					// Add ObsidianNote field if missing and note type has it
+					if (noteType.fields.includes('ObsidianNote') && !('ObsidianNote' in contentFields)) {
+						contentFields['ObsidianNote'] = sourcePath;
+					}
+				}
 			}
 
 			// Construct Flashcard with proper structure and mandatory defaults

@@ -56,10 +56,10 @@ tags:
   - topic2
 ```
 
-### Anki Tagging Strategy
-- `obsidian-synced`: Universal tag for all synced cards
-- `obsidian-vault:vault-name`: Vault identification
-- `obsidian-file:path/to/file.md`: File path for backlinking
+### Anki Integration Strategy
+- **Vault tags**: `obsidian-vault:vault-name` for vault identification and isolation
+- **Backlink fields**: `ObsidianVault` and `ObsidianNote` fields auto-populated during sync
+- **Clean field-based approach**: File path stored as field data, not encoded in tags
 
 ### Settings Configuration
 - Anki deck selection (default: "Default")
@@ -77,11 +77,13 @@ tags:
 4. ✅ Add basic CRUD operations for Anki cards
 5. ✅ Implement sync execution with progress tracking
 6. ✅ Add default deck configuration in settings
+7. ✅ Implement Obsidian backlinks with ObsidianVault/ObsidianNote fields
+8. ✅ Clean up circular dependencies with NoteType interface refactoring
 
 ### Short Term (2-3 Sprints)
 1. Add keyboard shortcuts and commands
-2. Implement flashcard rendering in reading mode
-3. Add cloze deletion syntax support
+2. Add cloze deletion syntax support
+3. Improve backlink user experience and documentation
 
 ### Long Term (Future Releases)
 1. Media synchronization

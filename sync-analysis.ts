@@ -1,5 +1,6 @@
 import { App, Modal, Notice, CachedMetadata, TFile, MarkdownView } from 'obsidian';
-import { AnkiService, AnkiNote, AnkiDataConverter, AnkiNoteType } from './anki-service';
+import { AnkiService, AnkiNote, AnkiDataConverter } from './anki-service';
+import { NoteType } from './flashcard';
 import { Flashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser } from './flashcard';
 import { MarkdownService } from './markdown-service';
 import { FlashcardRenderer } from './flashcard-renderer';
@@ -24,9 +25,9 @@ export class SyncProgressModal extends Modal {
 	private onComplete: (analysis: SyncAnalysis) => void;
 	private ankiService: AnkiService;
 	private vaultName: string;
-	private availableNoteTypes: AnkiNoteType[];
+	private availableNoteTypes: NoteType[];
 
-	constructor(app: App, ankiService: AnkiService, availableNoteTypes: AnkiNoteType[], onComplete: (analysis: SyncAnalysis) => void) {
+	constructor(app: App, ankiService: AnkiService, availableNoteTypes: NoteType[], onComplete: (analysis: SyncAnalysis) => void) {
 		super(app);
 		this.onComplete = onComplete;
 		this.ankiService = ankiService;
@@ -232,7 +233,9 @@ export class SyncProgressModal extends Modal {
 						blockContent.trim(), 
 						file.path, 
 						startLine + 1, // 1-indexed for user display
-						endLine + 1
+						endLine + 1,
+						this.vaultName,
+						this.availableNoteTypes
 					);
 					
 					// Validate flashcard if it parsed successfully

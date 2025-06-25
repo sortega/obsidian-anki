@@ -1,6 +1,6 @@
 import { YankiConnect } from 'yanki-connect';
-import { Flashcard } from './flashcard';
-import { OBSIDIAN_SYNC_TAG, OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_FILE_TAG_PREFIX } from './constants';
+import { Flashcard, NoteType } from './flashcard';
+import { OBSIDIAN_VAULT_TAG_PREFIX } from './constants';
 
 // Domain types for Anki data structures
 export interface AnkiNoteField {
@@ -16,17 +16,13 @@ export interface AnkiNote {
 	cards: number[];
 }
 
-export interface AnkiNoteType {
-	name: string;
-	fields: string[];
-}
 
 // Port - AnkiService interface defining operations needed by the application
 export interface AnkiService {
 	/**
 	 * Get all available note types from Anki with their field information
 	 */
-	getNoteTypes(): Promise<AnkiNoteType[]>;
+	getNoteTypes(): Promise<NoteType[]>;
 	
 	/**
 	 * Get all available deck names from Anki
@@ -67,9 +63,9 @@ export class YankiConnectAnkiService implements AnkiService {
 		this.yankiConnect = new YankiConnect();
 	}
 	
-	async getNoteTypes(): Promise<AnkiNoteType[]> {
+	async getNoteTypes(): Promise<NoteType[]> {
 		const noteTypeNames = await this.yankiConnect.model.modelNames();
-		const noteTypes: AnkiNoteType[] = [];
+		const noteTypes: NoteType[] = [];
 		
 		for (const noteTypeName of noteTypeNames) {
 			const fields = await this.yankiConnect.model.modelFieldNames({ modelName: noteTypeName });
@@ -88,7 +84,7 @@ export class YankiConnectAnkiService implements AnkiService {
 	
 	async getManagedNoteIds(vaultName: string): Promise<number[]> {
 		const vaultTag = `${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`;
-		const searchQuery = `tag:${OBSIDIAN_SYNC_TAG} AND tag:${vaultTag}`;
+		const searchQuery = `tag:${vaultTag}`;
 		return await this.yankiConnect.note.findNotes({ query: searchQuery });
 	}
 	
@@ -106,12 +102,10 @@ export class YankiConnectAnkiService implements AnkiService {
 	}
 	
 	async createNote(flashcard: Flashcard, deckName: string, vaultName: string): Promise<number> {
-		// Build Anki tags including Obsidian tracking tags
+		// Build Anki tags including Obsidian vault tag
 		const ankiTags = [
 			...flashcard.tags,
-			OBSIDIAN_SYNC_TAG,
-			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`,
-			`${OBSIDIAN_FILE_TAG_PREFIX}${flashcard.sourcePath}`
+			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`
 		];
 		
 		const noteId = await this.yankiConnect.note.addNote({
@@ -131,12 +125,10 @@ export class YankiConnectAnkiService implements AnkiService {
 	}
 	
 	async updateNote(ankiId: number, flashcard: Flashcard, vaultName: string): Promise<void> {
-		// Build Anki tags including Obsidian tracking tags
+		// Build Anki tags including Obsidian vault tag
 		const ankiTags = [
 			...flashcard.tags,
-			OBSIDIAN_SYNC_TAG,
-			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`,
-			`${OBSIDIAN_FILE_TAG_PREFIX}${flashcard.sourcePath}`
+			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`
 		];
 		
 		await this.yankiConnect.note.updateNote({
@@ -157,6 +149,7 @@ export class YankiConnectAnkiService implements AnkiService {
 			notes: noteIds
 		});
 	}
+	
 }
 
 // Utility functions for converting between Anki and Obsidian data formats
@@ -173,9 +166,10 @@ export class AnkiDataConverter {
 			contentFields[fieldName] = fieldData.value || '';
 		}
 		
-		// Extract source path from obsidian-file tag
-		const obsidianFileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
-		const sourcePath = obsidianFileTag ? obsidianFileTag.replace(OBSIDIAN_FILE_TAG_PREFIX, '') : '';
+		// Extract source path from ObsidianNote field
+		const sourcePath = (ankiNote.fields && ankiNote.fields['ObsidianNote']) 
+			? ankiNote.fields['ObsidianNote'].value 
+			: '';
 		
 		return {
 			sourcePath: sourcePath,

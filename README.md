@@ -10,6 +10,8 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 - 🎨 **Visual Rendering**: Beautiful flashcard display in reading mode
 - ⚙️ **Settings Management**: Configure note types and manage cached data
 - 🎯 **Note Type Selection**: Choose from available Anki note types
+- 🔄 **Full Sync**: Complete vault scanning and bidirectional sync with Anki
+- 🔗 **Obsidian Backlinks**: Automatic backlinks from Anki cards to Obsidian notes
 
 ### Coming Soon
 - ⌨️ **Keyboard Shortcuts**: Quick access to all plugin functions
@@ -80,6 +82,16 @@ Click the sync button in the ribbon to synchronize your flashcards with Anki. Th
 2. Compare with existing Anki cards
 3. Show you what changes will be made
 4. Apply changes after confirmation
+5. Update Obsidian files with new Anki IDs
+
+### Obsidian Backlinks
+
+The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead, it provides a way to link back to 
+your Obsidian notes:
+1. **Add special fields**: Include `ObsidianVault` and `ObsidianNote` fields in your Anki note types
+2. **Auto-population**: Fields are automatically filled during sync with vault name and file path
+3. **Create links**: Add `obsidian://open?vault={{ObsidianVault}}&file={{ObsidianNote}}` to your Anki card templates
+4. **Click to open**: Click the link in Anki to jump directly to the source note in Obsidian
 
 ## Configuration
 

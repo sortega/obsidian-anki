@@ -70,10 +70,17 @@ The plugin now includes comprehensive flashcard rendering with:
 - **Robust YAML parsing** - Uses js-yaml library for proper YAML syntax support
 - **Advanced YAML features** - Supports multiline strings (|, >), arrays, quoted strings, and complex structures
 
+### Obsidian Backlinks
+
+The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead, it provides a way to link back to
+your Obsidian notes:
+1. **Add special fields**: Include `ObsidianVault` and `ObsidianNote` fields in your Anki note types
+2. **Auto-population**: Fields are automatically filled during sync with vault name and file path
+3. **Create links**: Add `obsidian://open?vault={{ObsidianVault}}&file={{ObsidianNote}}` to your Anki card templates
+4. **Click to open**: Click the link in Anki to jump directly to the source note in Obsidian
+
 ## Current Limitations & TODOs
 
-- Sync button only tests connection, doesn't perform actual sync
-- No progress tracking for sync operations
 - No keyboard shortcuts defined
 - No cloze deletion syntax support
 - Missing media file synchronization
@@ -97,11 +104,11 @@ The plugin now includes comprehensive flashcard rendering with:
 
 ## Next Development Priorities
 
-1. Implement actual sync functionality (currently only tests connection)
-2. Add sync progress modal with user confirmation
-3. Add keyboard shortcuts for common actions
-4. Implement flashcard rendering in reading mode
-5. Add cloze deletion syntax support
+1. Add keyboard shortcuts for common actions
+2. Add cloze deletion syntax support
+3. Implement media file synchronization
+4. Add bulk operations for flashcard management
+5. Improve error handling and user feedback
 
 ## Development Guidelines
 

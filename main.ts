@@ -1,5 +1,6 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, MarkdownPostProcessorContext } from 'obsidian';
-import { AnkiService, YankiConnectAnkiService, AnkiNoteType } from './anki-service';
+import { AnkiService, YankiConnectAnkiService } from './anki-service';
+import { NoteType } from './flashcard';
 import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
 import { FlashcardCodeBlockProcessor } from './flashcard-renderer';
 import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-analysis';
@@ -9,7 +10,7 @@ import { DEFAULT_NOTE_TYPE, DEFAULT_DECK } from './constants';
 
 interface PluginSettings {
 	lastUsedNoteType: string;
-	availableNoteTypes: AnkiNoteType[];
+	availableNoteTypes: NoteType[];
 	defaultDeck: string;
 }
 

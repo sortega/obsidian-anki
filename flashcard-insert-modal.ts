@@ -1,8 +1,8 @@
 import { App, MarkdownView, SuggestModal } from 'obsidian';
-import { AnkiNoteType } from './anki-service';
+import { NoteType } from './flashcard';
 
 export interface FlashcardInsertModalProps {
-	availableNoteTypes: AnkiNoteType[];
+	availableNoteTypes: NoteType[];
 	lastUsedNoteType: string;
 	onNoteTypeSelected: (noteType: string) => Promise<void>;
 }
