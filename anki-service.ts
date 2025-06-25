@@ -1,6 +1,6 @@
 import { YankiConnect } from 'yanki-connect';
 import { Flashcard, NoteType } from './flashcard';
-import { OBSIDIAN_VAULT_TAG_PREFIX } from './constants';
+import { OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_SYNC_TAG } from './constants';
 
 // Domain types for Anki data structures
 export interface AnkiNoteField {
@@ -84,7 +84,7 @@ export class YankiConnectAnkiService implements AnkiService {
 	
 	async getManagedNoteIds(vaultName: string): Promise<number[]> {
 		const vaultTag = `${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`;
-		const searchQuery = `tag:${vaultTag}`;
+		const searchQuery = `tag:${OBSIDIAN_SYNC_TAG} AND tag:${vaultTag}`;
 		return await this.yankiConnect.note.findNotes({ query: searchQuery });
 	}
 	
@@ -105,6 +105,7 @@ export class YankiConnectAnkiService implements AnkiService {
 		// Build Anki tags including Obsidian vault tag
 		const ankiTags = [
 			...flashcard.tags,
+			OBSIDIAN_SYNC_TAG,
 			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`
 		];
 		
@@ -128,6 +129,7 @@ export class YankiConnectAnkiService implements AnkiService {
 		// Build Anki tags including Obsidian vault tag
 		const ankiTags = [
 			...flashcard.tags,
+			OBSIDIAN_SYNC_TAG,
 			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`
 		];
 		
