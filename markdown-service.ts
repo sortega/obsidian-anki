@@ -19,6 +19,9 @@ export class MarkdownService {
 	// Single rendering method for all use cases
 	static renderToHtml(markdown: string): string {
 		this.initialize(); // Ensure marked is configured
+		if (!markdown.includes('\n')) {
+			return marked.parseInline(markdown) as string;
+		}
 		return marked.parse(markdown) as string;
 	}
 }
