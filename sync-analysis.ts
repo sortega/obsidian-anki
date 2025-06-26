@@ -140,10 +140,10 @@ export class SyncProgressModal extends Modal {
 						// Invalid flashcard
 						this.analysis.invalidFlashcards.push(flashcard);
 					} else {
-						// Valid flashcard - categorize based on anki_id and content comparison
+						// Valid flashcard - categorize based on ankiId and content comparison
 						const ankiId = flashcard.ankiId;
 						if (ankiId) {
-							// Flashcard has anki_id - check if it exists in Anki
+							// Flashcard has ankiId - check if it exists in Anki
 							if (ankiNoteIds.includes(ankiId)) {
 								// Compare with Anki data to determine if changed
 								const ankiNoteData = this.analysis.ankiNotesData.get(ankiId);
@@ -158,7 +158,7 @@ export class SyncProgressModal extends Modal {
 								this.analysis.newFlashcards.push(flashcard);
 							}
 						} else {
-							// No anki_id - this is a new flashcard
+							// No ankiId - this is a new flashcard
 							this.analysis.newFlashcards.push(flashcard);
 						}
 					}
@@ -386,6 +386,7 @@ export class SyncConfirmationModal extends Modal {
 	private ankiService: AnkiService;
 	private settings: { defaultDeck: string };
 	private vaultName: string;
+	private orphanedCardAction: 'delete' | 'import' = 'delete';
 
 	constructor(app: App, analysis: SyncAnalysis, ankiService: AnkiService, settings: { defaultDeck: string }) {
 		super(app);
@@ -433,9 +434,7 @@ export class SyncConfirmationModal extends Modal {
 		}
 		
 		if (this.analysis.deletedAnkiNotes.length > 0) {
-			this.createExpandableStatSection(statsContainer, '🗑️ Deleted', this.analysis.deletedAnkiNotes.length, 'cards will be removed', 'sync-stat-deleted', () => {
-				return this.createDeletedNotesContent();
-			});
+			this.createOrphanedCardsSection(statsContainer);
 		}
 		
 		if (this.analysis.unchangedFlashcards > 0) {
@@ -497,6 +496,50 @@ export class SyncConfirmationModal extends Modal {
 		});
 	}
 
+
+	private createOrphanedCardsSection(container: HTMLElement) {
+		const details = container.createEl('details', { cls: 'sync-stat-item sync-stat-deleted sync-expandable-stat' });
+		const summary = details.createEl('summary', { cls: 'sync-expandable-stat-summary' });
+		
+		// Create a flex container for the label and dropdown
+		const summaryContent = summary.createEl('div', { cls: 'sync-orphaned-summary-content' });
+		
+		summaryContent.createEl('span', { 
+			cls: 'sync-stat-label',
+			text: `📋 Orphaned: ${this.analysis.deletedAnkiNotes.length}`
+		});
+		
+		// Add dropdown for action selection
+		const actionContainer = summaryContent.createEl('div', { cls: 'sync-orphaned-action-container' });
+		actionContainer.createEl('span', { text: ' → ' });
+		
+		const dropdown = actionContainer.createEl('select', { cls: 'sync-orphaned-action-dropdown' });
+		dropdown.createEl('option', { value: 'delete', text: 'Delete from Anki' });
+		dropdown.createEl('option', { value: 'import', text: 'Import into Obsidian' });
+		
+		dropdown.value = this.orphanedCardAction;
+		dropdown.addEventListener('change', (e) => {
+			this.orphanedCardAction = (e.target as HTMLSelectElement).value as 'delete' | 'import';
+			this.updateOrphanedActionDescription();
+		});
+		
+		// Lazy load content when expanded
+		details.addEventListener('toggle', () => {
+			if (details.open && !details.querySelector('.sync-expandable-content')) {
+				const content = details.createEl('div', { cls: 'sync-expandable-content' });
+				const sectionContent = this.createDeletedNotesContent();
+				content.appendChild(sectionContent);
+			}
+		});
+		
+		// Store reference for updating description
+		(details as any)._actionContainer = actionContainer;
+	}
+	
+	private updateOrphanedActionDescription() {
+		// This will be called when dropdown changes - for now just update text if needed
+		// The description update could be implemented if we want dynamic text changes
+	}
 
 	private logAnalysisToConsole() {
 		console.group('🔄 Anki Sync Analysis');
@@ -572,13 +615,14 @@ export class SyncConfirmationModal extends Modal {
 	private async applyChanges() {
 		console.log('🚀 Apply Changes clicked - starting sync to Anki');
 		
-		// Show sync execution modal
+		// Show sync execution modal with orphaned card action
 		const syncExecutionModal = new SyncExecutionModal(
 			this.app, 
 			this.analysis, 
 			this.ankiService, 
 			this.settings.defaultDeck,
-			this.vaultName
+			this.vaultName,
+			this.orphanedCardAction
 		);
 		
 		this.close();

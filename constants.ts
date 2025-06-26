@@ -9,3 +9,6 @@ export const OBSIDIAN_VAULT_TAG_PREFIX = 'obsidian-vault::';
 
 // Metadata fields for flashcard parsing
 export const METADATA_FIELDS = ['NoteType', 'AnkiId', 'Tags'];
+
+// Import settings
+export const DEFAULT_IMPORT_FILE = 'Imported Flashcards.md';

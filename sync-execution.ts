@@ -3,6 +3,7 @@ import { AnkiService, AnkiNote } from './anki-service';
 import { Flashcard } from './flashcard';
 import { SyncAnalysis } from './sync-analysis';
 import { MarkdownService } from './markdown-service';
+import { DEFAULT_IMPORT_FILE } from './constants';
 import * as yaml from 'js-yaml';
 
 export interface OperationResult {
@@ -27,6 +28,7 @@ export class SyncExecutionModal extends Modal {
 	private ankiService: AnkiService;
 	private defaultDeck: string;
 	private vaultName: string;
+	private orphanedCardAction: 'delete' | 'import';
 	private progressBar: HTMLElement;
 	private progressText: HTMLElement;
 	private statusText: HTMLElement;
@@ -34,12 +36,13 @@ export class SyncExecutionModal extends Modal {
 	private failureCountText: HTMLElement;
 	private results: SyncResults;
 
-	constructor(app: App, analysis: SyncAnalysis, ankiService: AnkiService, defaultDeck: string, vaultName: string) {
+	constructor(app: App, analysis: SyncAnalysis, ankiService: AnkiService, defaultDeck: string, vaultName: string, orphanedCardAction: 'delete' | 'import' = 'delete') {
 		super(app);
 		this.analysis = analysis;
 		this.ankiService = ankiService;
 		this.defaultDeck = defaultDeck;
 		this.vaultName = vaultName;
+		this.orphanedCardAction = orphanedCardAction;
 	}
 
 	onOpen() {
@@ -178,66 +181,17 @@ export class SyncExecutionModal extends Modal {
 				completed++;
 			}
 
-			// Delete removed flashcards
+			// Handle orphaned cards (delete or import)
 			if (this.analysis.deletedAnkiNotes.length > 0) {
-				try {
-					this.updateProgress(completed / totalOperations, `Deleting ${this.analysis.deletedAnkiNotes.length} removed notes...`);
-					
-					const noteIds = this.analysis.deletedAnkiNotes.map(note => note.noteId);
-					await this.ankiService.deleteNotes(noteIds);
-					
-					// Track successful delete operations
-					for (const deletedNote of this.analysis.deletedAnkiNotes) {
-						// Convert AnkiNote to Flashcard for tracking
-						const flashcardForTracking: Flashcard = {
-							sourcePath: '',
-							lineStart: 0,
-							lineEnd: 0,
-							noteType: deletedNote.modelName,
-							tags: deletedNote.tags || [],
-							contentFields: {},
-							ankiId: deletedNote.noteId
-						};
-						
-						this.results.successfulOperations.push({
-							flashcard: flashcardForTracking,
-							success: true,
-							noteId: deletedNote.noteId,
-							operation: 'delete'
-						});
-					}
-					this.updateCounters();
-					
-					console.log(`✅ Deleted ${noteIds.length} notes:`, noteIds);
-				} catch (error) {
-					// Track failed delete operations
-					for (const deletedNote of this.analysis.deletedAnkiNotes) {
-						const flashcardForTracking: Flashcard = {
-							sourcePath: '',
-							lineStart: 0,
-							lineEnd: 0,
-							noteType: deletedNote.modelName,
-							tags: deletedNote.tags || [],
-							contentFields: {},
-							ankiId: deletedNote.noteId
-						};
-						
-						this.results.failedOperations.push({
-							flashcard: flashcardForTracking,
-							success: false,
-							error: this.parseUserFriendlyError(error, 'delete'),
-							noteId: deletedNote.noteId,
-							operation: 'delete'
-						});
-					}
-					this.updateCounters();
-					
-					console.error(`❌ Failed to delete notes:`, error);
+				if (this.orphanedCardAction === 'delete') {
+					await this.handleDeleteOrphanedCards(completed, totalOperations);
+				} else {
+					await this.handleImportOrphanedCards(completed, totalOperations);
 				}
 				completed += this.analysis.deletedAnkiNotes.length;
 			}
 
-			// Update Obsidian files with new anki_id values
+			// Update Obsidian files with new ankiId values
 			if (createdNoteIds.length > 0) {
 				this.updateProgress(0.9, 'Updating Obsidian files with Anki IDs...');
 				await this.updateObsidianFiles(createdNoteIds);
@@ -268,6 +222,115 @@ export class SyncExecutionModal extends Modal {
 			console.error('Sync execution failed:', error);
 			new Notice(`Sync failed: ${error instanceof Error ? error.message : String(error)}`);
 			this.close();
+		}
+	}
+
+	private async handleDeleteOrphanedCards(completed: number, totalOperations: number) {
+		try {
+			this.updateProgress(completed / totalOperations, `Deleting ${this.analysis.deletedAnkiNotes.length} orphaned notes...`);
+			
+			const noteIds = this.analysis.deletedAnkiNotes.map(note => note.noteId);
+			await this.ankiService.deleteNotes(noteIds);
+			
+			// Track successful delete operations
+			for (const deletedNote of this.analysis.deletedAnkiNotes) {
+				const flashcardForTracking: Flashcard = {
+					sourcePath: '',
+					lineStart: 0,
+					lineEnd: 0,
+					noteType: deletedNote.modelName,
+					tags: deletedNote.tags || [],
+					contentFields: {},
+					ankiId: deletedNote.noteId
+				};
+				
+				this.results.successfulOperations.push({
+					flashcard: flashcardForTracking,
+					success: true,
+					noteId: deletedNote.noteId,
+					operation: 'delete'
+				});
+			}
+			this.updateCounters();
+			
+			console.log(`✅ Deleted ${noteIds.length} orphaned notes:`, noteIds);
+		} catch (error) {
+			// Track failed delete operations
+			for (const deletedNote of this.analysis.deletedAnkiNotes) {
+				const flashcardForTracking: Flashcard = {
+					sourcePath: '',
+					lineStart: 0,
+					lineEnd: 0,
+					noteType: deletedNote.modelName,
+					tags: deletedNote.tags || [],
+					contentFields: {},
+					ankiId: deletedNote.noteId
+				};
+				
+				this.results.failedOperations.push({
+					flashcard: flashcardForTracking,
+					success: false,
+					error: this.parseUserFriendlyError(error, 'delete'),
+					noteId: deletedNote.noteId,
+					operation: 'delete'
+				});
+			}
+			this.updateCounters();
+			
+			console.error(`❌ Failed to delete orphaned notes:`, error);
+		}
+	}
+
+	private async handleImportOrphanedCards(completed: number, totalOperations: number) {
+		this.updateProgress(completed / totalOperations, `Importing ${this.analysis.deletedAnkiNotes.length} orphaned cards...`);
+		
+		for (const orphanedNote of this.analysis.deletedAnkiNotes) {
+			try {
+				await this.importOrphanedCard(orphanedNote);
+				
+				// Track successful import operation
+				const flashcardForTracking: Flashcard = {
+					sourcePath: '',
+					lineStart: 0,
+					lineEnd: 0,
+					noteType: orphanedNote.modelName,
+					tags: orphanedNote.tags || [],
+					contentFields: {},
+					ankiId: orphanedNote.noteId
+				};
+				
+				this.results.successfulOperations.push({
+					flashcard: flashcardForTracking,
+					success: true,
+					noteId: orphanedNote.noteId,
+					operation: 'create' // Import is like creating in Obsidian
+				});
+				this.updateCounters();
+				
+				console.log(`✅ Imported orphaned note ${orphanedNote.noteId}`);
+			} catch (error) {
+				// Track failed import operation
+				const flashcardForTracking: Flashcard = {
+					sourcePath: '',
+					lineStart: 0,
+					lineEnd: 0,
+					noteType: orphanedNote.modelName,
+					tags: orphanedNote.tags || [],
+					contentFields: {},
+					ankiId: orphanedNote.noteId
+				};
+				
+				this.results.failedOperations.push({
+					flashcard: flashcardForTracking,
+					success: false,
+					error: this.parseUserFriendlyError(error, 'create'),
+					noteId: orphanedNote.noteId,
+					operation: 'create'
+				});
+				this.updateCounters();
+				
+				console.error(`❌ Failed to import orphaned note ${orphanedNote.noteId}:`, error);
+			}
 		}
 	}
 
@@ -304,7 +367,7 @@ export class SyncExecutionModal extends Modal {
 
 				if (updatedContent !== content) {
 					await this.app.vault.modify(file, updatedContent);
-					console.log(`✅ Updated ${filePath} with ${items.length} anki_id values`);
+					console.log(`✅ Updated ${filePath} with ${items.length} Anki ID values`);
 				}
 			} catch (error) {
 				console.error(`❌ Failed to update file ${filePath}:`, error);
@@ -343,12 +406,12 @@ export class SyncExecutionModal extends Modal {
 			return content;
 		}
 		
-		// Parse the YAML content and add anki_id
+		// Parse the YAML content and add ankiId
 		const yamlLines = lines.slice(blockStart + 1, blockEnd);
 		const yamlContent = yamlLines.join('\n');
 		
 		try {
-			// Add anki_id to the YAML content
+			// Add ankiId to the YAML content
 			const updatedYaml = this.upsertAnkiIdInYaml(yamlContent, noteId);
 			
 			// Replace the lines
@@ -360,6 +423,79 @@ export class SyncExecutionModal extends Modal {
 			console.warn(`Failed to parse YAML for ${flashcard.sourcePath}:${flashcard.lineStart}:`, error);
 			return content;
 		}
+	}
+
+	private async importOrphanedCard(orphanedNote: AnkiNote) {
+		// Convert AnkiNote to Flashcard using the AnkiService
+		const flashcard = this.ankiService.convertOrphanedNoteToFlashcard(orphanedNote);
+		
+		// Determine target file - check if sourcePath is available from the conversion
+		let targetFilePath = flashcard.sourcePath || DEFAULT_IMPORT_FILE;
+		
+		// Verify the target file exists if it came from the flashcard
+		if (flashcard.sourcePath) {
+			const file = this.app.vault.getAbstractFileByPath(flashcard.sourcePath);
+			if (!(file instanceof TFile)) {
+				// Fall back to default if original file doesn't exist
+				targetFilePath = DEFAULT_IMPORT_FILE;
+			}
+		}
+		
+		// Convert flashcard to YAML format
+		const flashcardYaml = this.convertFlashcardToYaml(flashcard);
+		
+		// Append to target file
+		await this.appendFlashcardToFile(targetFilePath, flashcardYaml);
+		
+		console.log(`✅ Imported orphaned card ${orphanedNote.noteId} to ${targetFilePath}`);
+	}
+	
+	private convertFlashcardToYaml(flashcard: Flashcard): string {
+		const yamlData: any = {
+			NoteType: flashcard.noteType,
+			AnkiId: flashcard.ankiId
+		};
+		
+		// Add field content (already converted to markdown by AnkiService)
+		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
+			yamlData[fieldName] = fieldValue;
+		}
+		
+		// Add tags if present
+		if (flashcard.tags.length > 0) {
+			yamlData.tags = flashcard.tags;
+		}
+		
+		return yaml.dump(yamlData, {
+			indent: 2,
+			lineWidth: -1,
+			noRefs: true,
+			sortKeys: false
+		});
+	}
+	
+	private async appendFlashcardToFile(filePath: string, flashcardYaml: string) {
+		let file = this.app.vault.getAbstractFileByPath(filePath);
+		
+		// Create file if it doesn't exist
+		if (!file) {
+			await this.app.vault.create(filePath, '# Imported Flashcards\n\n');
+			file = this.app.vault.getAbstractFileByPath(filePath);
+		}
+		
+		if (!(file instanceof TFile)) {
+			throw new Error(`Could not create or access file: ${filePath}`);
+		}
+		
+		// Read current content
+		const currentContent = await this.app.vault.read(file);
+		
+		// Append the flashcard block
+		const newContent = currentContent + (currentContent.endsWith('\n') ? '' : '\n') + 
+			`\n\`\`\`flashcard\n${flashcardYaml.trim()}\n\`\`\`\n`;
+		
+		// Write back to file
+		await this.app.vault.modify(file, newContent);
 	}
 
 	private upsertAnkiIdInYaml(yamlContent: string, noteId: number): string {

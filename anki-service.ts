@@ -1,6 +1,13 @@
 import { YankiConnect } from 'yanki-connect';
 import { Flashcard, NoteType } from './flashcard';
 import { OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_SYNC_TAG } from './constants';
+const TurndownService = require('turndown');
+
+// Turndown service interface for better typing
+interface TurndownInstance {
+	turndown(html: string): string;
+	addRule(name: string, rule: any): void;
+}
 
 // Domain types for Anki data structures
 export interface AnkiNoteField {
@@ -53,14 +60,29 @@ export interface AnkiService {
 	 * Delete notes from Anki by their IDs
 	 */
 	deleteNotes(noteIds: number[]): Promise<void>;
+	
+	/**
+	 * Convert an orphaned AnkiNote to a Flashcard with markdown content
+	 */
+	convertOrphanedNoteToFlashcard(ankiNote: AnkiNote): Flashcard;
 }
 
 // Adapter - YankiConnect implementation of AnkiService
 export class YankiConnectAnkiService implements AnkiService {
 	private yankiConnect: YankiConnect;
+	private turndownService: TurndownInstance;
 	
 	constructor() {
 		this.yankiConnect = new YankiConnect();
+		
+		// Initialize turndown service for HTML to markdown conversion
+		this.turndownService = new TurndownService({
+			headingStyle: 'atx',
+			codeBlockStyle: 'fenced',
+			bulletListMarker: '-',
+			emDelimiter: '*',
+			strongDelimiter: '**'
+		});
 	}
 	
 	async getNoteTypes(): Promise<NoteType[]> {
@@ -150,6 +172,48 @@ export class YankiConnectAnkiService implements AnkiService {
 		await this.yankiConnect.note.deleteNotes({
 			notes: noteIds
 		});
+	}
+	
+	convertOrphanedNoteToFlashcard(ankiNote: AnkiNote): Flashcard {
+		const contentFields: Record<string, string> = {};
+		
+		// Add field content (convert HTML to markdown)
+		for (const [fieldName, fieldData] of Object.entries(ankiNote.fields || {})) {
+			if (fieldName === 'ObsidianNote') continue; // Skip metadata field
+			
+			let fieldValue = fieldData.value || '';
+			
+			// Use turndown to convert HTML to markdown
+			if (fieldValue.trim()) {
+				try {
+					fieldValue = this.turndownService.turndown(fieldValue).trim();
+				} catch (error) {
+					console.warn(`Failed to convert HTML to markdown for field ${fieldName}:`, error);
+					// Keep original HTML if conversion fails - better to preserve content than lose it
+					// No need to trim again since we already checked fieldValue.trim() above
+				}
+			}
+			
+			contentFields[fieldName] = fieldValue;
+		}
+		
+		// Extract source path from ObsidianNote field
+		const sourcePath = (ankiNote.fields && ankiNote.fields['ObsidianNote']) 
+			? ankiNote.fields['ObsidianNote'].value 
+			: '';
+		
+		// Add tags (excluding obsidian-* tags)
+		const userTags = (ankiNote.tags || []).filter(tag => !tag.startsWith('obsidian-'));
+		
+		return {
+			sourcePath: sourcePath,
+			lineStart: 0, // We don't have line info for orphaned notes
+			lineEnd: 0,
+			noteType: ankiNote.modelName,
+			contentFields: contentFields,
+			tags: userTags,
+			ankiId: ankiNote.noteId
+		};
 	}
 	
 }

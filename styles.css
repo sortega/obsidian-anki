@@ -481,6 +481,40 @@ If your plugin does not need CSS, delete this file.
     text-decoration: underline;
 }
 
+/* Orphaned Cards Section */
+.sync-orphaned-summary-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.sync-orphaned-action-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.sync-orphaned-action-dropdown {
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: var(--font-ui-small);
+    color: var(--text-normal);
+    cursor: pointer;
+}
+
+.sync-orphaned-action-dropdown:hover {
+    background: var(--background-modifier-hover);
+}
+
+.sync-orphaned-action-dropdown:focus {
+    outline: 1px solid var(--text-accent);
+    outline-offset: 1px;
+}
+
 .sync-details-content {
     padding: 16px;
 }

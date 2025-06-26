@@ -120,6 +120,20 @@ npm run dev
 npm run build
 ```
 
+### Testing
+```bash
+# Run tests once
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+See [TESTING.md](TESTING.md) for detailed testing information.
+
 ### Project Structure
 - `main.ts` - Main plugin entry point
 - `flashcard-insert-modal.ts` - Modal for inserting flashcards
