@@ -463,7 +463,7 @@ export class SyncExecutionModal extends Modal {
 		
 		// Add tags if present
 		if (flashcard.tags.length > 0) {
-			yamlData.tags = flashcard.tags;
+			yamlData.Tags = flashcard.tags;
 		}
 		
 		return yaml.dump(yamlData, {
