@@ -6,6 +6,7 @@ export const DEFAULT_DECK = 'Default';
 // Anki tagging strategy
 export const OBSIDIAN_SYNC_TAG = 'obsidian-synced';
 export const OBSIDIAN_VAULT_TAG_PREFIX = 'obsidian-vault::';
+export const OBSIDIAN_FILE_TAG_PREFIX = 'obsidian-file::';
 
 // Metadata fields for flashcard parsing
 export const METADATA_FIELDS = ['NoteType', 'AnkiId', 'Tags'];

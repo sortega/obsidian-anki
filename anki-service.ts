@@ -1,6 +1,6 @@
 import { YankiConnect } from 'yanki-connect';
 import { Flashcard, NoteType } from './flashcard';
-import { OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_SYNC_TAG } from './constants';
+import { OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_SYNC_TAG, OBSIDIAN_FILE_TAG_PREFIX } from './constants';
 const TurndownService = require('turndown');
 
 // Turndown service interface for better typing
@@ -197,10 +197,17 @@ export class YankiConnectAnkiService implements AnkiService {
 			contentFields[fieldName] = fieldValue;
 		}
 		
-		// Extract source path from ObsidianNote field
-		const sourcePath = (ankiNote.fields && ankiNote.fields['ObsidianNote']) 
-			? ankiNote.fields['ObsidianNote'].value 
-			: '';
+		// Extract source path with priority: obsidian-file:: tag > ObsidianNote field
+		let sourcePath = '';
+		
+		// First, try to find obsidian-file:: tag (higher priority)
+		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
+		if (fileTag) {
+			sourcePath = fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length);
+		} else if (ankiNote.fields && ankiNote.fields['ObsidianNote']) {
+			// Fallback to ObsidianNote field
+			sourcePath = ankiNote.fields['ObsidianNote'].value;
+		}
 		
 		// Add tags (excluding obsidian-* tags)
 		const userTags = (ankiNote.tags || []).filter(tag => !tag.startsWith('obsidian-'));

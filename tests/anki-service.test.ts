@@ -22,7 +22,7 @@ describe('YankiConnectAnkiService', () => {
         Front: { value: '<p>What is <strong>2+2</strong>?</p>', order: 0 },
         Back: { value: '<p>The answer is <em>4</em></p>', order: 1 },
       },
-      tags: ['math', 'basic', 'obsidian-synced', 'obsidian-vault::test-vault'],
+      tags: ['math', 'basic', 'obsidian-synced', 'obsidian-vault::test-vault', 'obsidian-file::notes/file.md'],
       cards: [67890],
       ...overrides,
     });
@@ -33,7 +33,7 @@ describe('YankiConnectAnkiService', () => {
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
       expect(result).toEqual({
-        sourcePath: '',
+        sourcePath: 'notes/file.md', // From obsidian-file:: tag
         lineStart: 0,
         lineEnd: 0,
         noteType: 'Basic',
@@ -46,19 +46,40 @@ describe('YankiConnectAnkiService', () => {
       });
     });
 
-    it('should extract source path from ObsidianNote field', () => {
+    it('should extract source path from ObsidianNote field when no file tag exists', () => {
       const ankiNote = createMockAnkiNote({
         fields: {
           Front: { value: 'Question', order: 0 },
           Back: { value: 'Answer', order: 1 },
           ObsidianNote: { value: 'Notes/My Note.md', order: 2 },
         },
+        tags: ['math', 'basic', 'obsidian-synced', 'obsidian-vault::test-vault'], // No file tag
       });
 
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
       expect(result.sourcePath).toBe('Notes/My Note.md');
       expect(result.contentFields).not.toHaveProperty('ObsidianNote');
+    });
+
+    it('should prioritize obsidian-file:: tag over ObsidianNote field for source path', () => {
+      const ankiNote = createMockAnkiNote({
+        fields: {
+          Front: { value: 'Question', order: 0 },
+          Back: { value: 'Answer', order: 1 },
+          ObsidianNote: { value: 'Notes/Old Path.md', order: 2 },
+        },
+        tags: [
+          'user-tag',
+          'obsidian-file::Notes/New Path.md',
+          'obsidian-synced',
+        ],
+      });
+
+      const result = service.convertOrphanedNoteToFlashcard(ankiNote);
+
+      expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
+      expect(result.tags).toEqual(['user-tag']); // Should filter out obsidian-* tags
     });
 
     it('should filter out obsidian-* tags but keep user tags', () => {
