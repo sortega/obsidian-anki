@@ -213,7 +213,7 @@ export class YankiConnectAnkiService implements AnkiService {
 		const userTags = (ankiNote.tags || []).filter(tag => !tag.startsWith('obsidian-'));
 		
 		return {
-			sourcePath: sourcePath,
+			sourcePath,
 			lineStart: 0, // We don't have line info for orphaned notes
 			lineEnd: 0,
 			noteType: ankiNote.modelName,
@@ -239,10 +239,17 @@ export class AnkiDataConverter {
 			contentFields[fieldName] = fieldData.value || '';
 		}
 		
-		// Extract source path from ObsidianNote field
-		const sourcePath = (ankiNote.fields && ankiNote.fields['ObsidianNote']) 
-			? ankiNote.fields['ObsidianNote'].value 
-			: '';
+		// Extract source path with priority: obsidian-file:: tag > ObsidianNote field
+		let sourcePath = '';
+		
+		// First, try to find obsidian-file:: tag (higher priority)
+		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
+		if (fileTag) {
+			sourcePath = fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length);
+		} else if (ankiNote.fields && ankiNote.fields['ObsidianNote']) {
+			// Fallback to ObsidianNote field
+			sourcePath = ankiNote.fields['ObsidianNote'].value;
+		}
 		
 		return {
 			sourcePath: sourcePath,

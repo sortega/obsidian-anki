@@ -3,7 +3,7 @@ jest.mock('yanki-connect', () => ({
   YankiConnect: jest.fn().mockImplementation(() => ({})),
 }), { virtual: true });
 
-import { YankiConnectAnkiService, AnkiNote } from '../anki-service';
+import { YankiConnectAnkiService, AnkiNote, AnkiDataConverter } from '../anki-service';
 import { Flashcard } from '../flashcard';
 
 describe('YankiConnectAnkiService', () => {
@@ -245,6 +245,43 @@ describe('YankiConnectAnkiService', () => {
         'Back Extra': '',
       });
       expect(result.noteType).toBe('Cloze');
+    });
+
+    describe('AnkiDataConverter integration', () => {
+      it('should prioritize obsidian-file:: tag over ObsidianNote field', () => {
+        const ankiNote = createMockAnkiNote({
+          fields: {
+            Front: { value: 'Question', order: 0 },
+            Back: { value: 'Answer', order: 1 },
+            ObsidianNote: { value: 'Notes/Old Path.md', order: 2 },
+          },
+          tags: [
+            'user-tag',
+            'obsidian-file::Notes/New Path.md',
+            'obsidian-synced',
+          ],
+        });
+
+        const result = AnkiDataConverter.toFlashcard(ankiNote, 'Basic');
+
+        expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
+        expect(result.noteType).toBe('Basic');
+      });
+
+      it('should fallback to ObsidianNote field when no file tag exists', () => {
+        const ankiNote = createMockAnkiNote({
+          fields: {
+            Front: { value: 'Question', order: 0 },
+            Back: { value: 'Answer', order: 1 },
+            ObsidianNote: { value: 'Notes/My Note.md', order: 2 },
+          },
+          tags: ['user-tag', 'obsidian-synced'], // No file tag
+        });
+
+        const result = AnkiDataConverter.toFlashcard(ankiNote, 'Basic');
+
+        expect(result.sourcePath).toBe('Notes/My Note.md');
+      });
     });
   });
 });

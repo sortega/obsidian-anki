@@ -29,6 +29,7 @@
 
 ### Syncing
 - Include the deck in when comparing flashcards
+- Don't sync leech nor marked tags
 - Sync local images
 - Sync other media (low priority)
 

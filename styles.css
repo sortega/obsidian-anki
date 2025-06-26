@@ -567,6 +567,24 @@ If your plugin does not need CSS, delete this file.
     color: var(--text-muted);
 }
 
+.sync-flashcard-file-link {
+    color: var(--text-accent);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.sync-flashcard-file-link:hover {
+    text-decoration: underline;
+    color: var(--text-accent-hover);
+}
+
+.sync-flashcard-anki-id {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+    opacity: 0.7;
+}
+
 .sync-flashcard-type {
     font-size: var(--font-ui-small);
     color: var(--text-accent);

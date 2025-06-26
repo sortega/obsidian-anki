@@ -685,15 +685,34 @@ export class SyncConfirmationModal extends Modal {
 		for (const ankiNote of this.analysis.deletedAnkiNotes.slice(0, 5)) {
 			const item = this.createFlashcardItem(content as any, 'sync-flashcard-deleted');
 			
-			// Show Anki ID instead of file reference
+			// Convert to flashcard to get sourcePath
+			const ankiAsFlashcard = AnkiDataConverter.toFlashcard(ankiNote, ankiNote.modelName);
+			
+			// Show source path and Anki ID
 			const idRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
-			idRef.createEl('span', { 
-				cls: 'sync-flashcard-file',
-				text: `Anki Note ID: ${ankiNote.noteId}`
-			});
+			
+			if (ankiAsFlashcard.sourcePath) {
+				const fileLink = idRef.createEl('a', { 
+					cls: 'sync-flashcard-file sync-flashcard-file-link',
+					text: ankiAsFlashcard.sourcePath,
+					href: '#'
+				});
+				fileLink.addEventListener('click', (e) => {
+					e.preventDefault();
+					this.app.workspace.openLinkText(ankiAsFlashcard.sourcePath, '', false);
+				});
+				idRef.createEl('span', { 
+					cls: 'sync-flashcard-anki-id',
+					text: ` (Anki ID: ${ankiNote.noteId})`
+				});
+			} else {
+				idRef.createEl('span', { 
+					cls: 'sync-flashcard-file',
+					text: `Anki Note ID: ${ankiNote.noteId}`
+				});
+			}
 			
 			// Render the deleted flashcard
-			const ankiAsFlashcard = AnkiDataConverter.toFlashcard(ankiNote, ankiNote.modelName);
 			this.renderFlashcard(item, ankiAsFlashcard);
 		}
 		

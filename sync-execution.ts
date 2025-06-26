@@ -306,8 +306,6 @@ export class SyncExecutionModal extends Modal {
 					operation: 'create' // Import is like creating in Obsidian
 				});
 				this.updateCounters();
-				
-				console.log(`✅ Imported orphaned note ${orphanedNote.noteId}`);
 			} catch (error) {
 				// Track failed import operation
 				const flashcardForTracking: Flashcard = {
@@ -429,16 +427,10 @@ export class SyncExecutionModal extends Modal {
 		// Convert AnkiNote to Flashcard using the AnkiService
 		const flashcard = this.ankiService.convertOrphanedNoteToFlashcard(orphanedNote);
 		
-		// Determine target file - check if sourcePath is available from the conversion
+		// Determine target file and ensure .md extension is added if not present
 		let targetFilePath = flashcard.sourcePath || DEFAULT_IMPORT_FILE;
-		
-		// Verify the target file exists if it came from the flashcard
-		if (flashcard.sourcePath) {
-			const file = this.app.vault.getAbstractFileByPath(flashcard.sourcePath);
-			if (!(file instanceof TFile)) {
-				// Fall back to default if original file doesn't exist
-				targetFilePath = DEFAULT_IMPORT_FILE;
-			}
+		if (!targetFilePath.endsWith('.md')) {
+			targetFilePath = targetFilePath + '.md';
 		}
 		
 		// Convert flashcard to YAML format
@@ -447,7 +439,7 @@ export class SyncExecutionModal extends Modal {
 		// Append to target file
 		await this.appendFlashcardToFile(targetFilePath, flashcardYaml);
 		
-		console.log(`✅ Imported orphaned card ${orphanedNote.noteId} to ${targetFilePath}`);
+		console.log(`✅ Imported orphaned card ${orphanedNote.noteId} to ${targetFilePath}`, flashcard);
 	}
 	
 	private convertFlashcardToYaml(flashcard: Flashcard): string {
