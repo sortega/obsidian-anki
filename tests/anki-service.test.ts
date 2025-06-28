@@ -262,7 +262,7 @@ describe('YankiConnectAnkiService', () => {
           ],
         });
 
-        const result = service.toHtmlFlashcard(ankiNote, 'Basic');
+        const result = service.toHtmlFlashcard(ankiNote);
 
         expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
         expect(result.noteType).toBe('Basic');
@@ -278,7 +278,7 @@ describe('YankiConnectAnkiService', () => {
           tags: ['user-tag', 'obsidian-synced'], // No file tag
         });
 
-        const result = service.toHtmlFlashcard(ankiNote, 'Basic');
+        const result = service.toHtmlFlashcard(ankiNote);
 
         expect(result.sourcePath).toBe('Notes/My Note.md');
       });
@@ -296,7 +296,7 @@ describe('YankiConnectAnkiService', () => {
         });
 
         const serviceWithCustomIgnored = new YankiConnectAnkiService(['marked', 'leech', 'custom-ignored']);
-        const result = serviceWithCustomIgnored.toHtmlFlashcard(ankiNote, 'Basic');
+        const result = serviceWithCustomIgnored.toHtmlFlashcard(ankiNote);
 
         expect(result.tags).toEqual(['user-tag', 'another-user-tag']); // Should filter out obsidian-* and ignored tags
       });

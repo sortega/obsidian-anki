@@ -679,7 +679,7 @@ export class SyncConfirmationModal extends Modal {
 		
 		for (const ankiNote of this.analysis.deletedAnkiNotes.slice(0, 5)) {
 			const item = this.createFlashcardItem(content as any, 'sync-flashcard-deleted');
-			const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote, ankiNote.modelName);
+			const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote);
 			
 			// Show source path and Anki ID
 			const idRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
@@ -810,7 +810,7 @@ export class SyncConfirmationModal extends Modal {
 		const obsidianContainer = obsidianSide.createEl('div', { cls: 'sync-diff-flashcard-container sync-diff-new' });
 		
 		// Convert Anki note to HtmlFlashcard format (already HTML)
-		const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote, obsidian.noteType);
+		const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote);
 		
 		// Convert Obsidian flashcard to HTML format
 		const obsidianAsHtmlFlashcard = MarkdownService.toHtmlFlashcard(obsidian);

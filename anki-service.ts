@@ -69,7 +69,7 @@ export interface AnkiService {
 	/**
 	 * Convert an AnkiNote to HtmlFlashcard format for display
 	 */
-	toHtmlFlashcard(ankiNote: AnkiNote, noteType: string): HtmlFlashcard;
+	toHtmlFlashcard(ankiNote: AnkiNote): HtmlFlashcard;
 	
 	/**
 	 * Filter tags (excluding obsidian-* tags and ignored tags)
@@ -257,7 +257,7 @@ export class YankiConnectAnkiService implements AnkiService {
 		};
 	}
 
-	toHtmlFlashcard(ankiNote: AnkiNote, noteType: string): HtmlFlashcard {
+	toHtmlFlashcard(ankiNote: AnkiNote): HtmlFlashcard {
 		const htmlFields: Record<string, string> = {};
 		
 		// Convert Anki htmlFields to htmlFields (keep HTML for display)
@@ -270,7 +270,7 @@ export class YankiConnectAnkiService implements AnkiService {
 			sourcePath: this.extractSourcePath(ankiNote),
 			lineStart: 0, // We don't have line info for Anki notes
 			lineEnd: 0,
-			noteType: noteType,
+			noteType: ankiNote.modelName,
 			htmlFields: htmlFields,
 			tags: this.filterUserTags(ankiNote.tags),
 			ankiId: ankiNote.noteId
