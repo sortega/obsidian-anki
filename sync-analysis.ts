@@ -1,7 +1,7 @@
 import { App, Modal, Notice, CachedMetadata, TFile, MarkdownView } from 'obsidian';
 import { AnkiService, AnkiNote } from './anki-service';
 import { NoteType } from './flashcard';
-import { Flashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser } from './flashcard';
+import { Flashcard, HtmlFlashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser } from './flashcard';
 import { MarkdownService } from './markdown-service';
 import { FlashcardRenderer } from './flashcard-renderer';
 import { SyncExecutionModal } from './sync-execution';
@@ -290,17 +290,12 @@ export class SyncProgressModal extends Modal {
 	
 	private compareFlashcardWithAnki(flashcard: Flashcard, ankiNoteData: AnkiNote): boolean {
 		try {
-			// Render flashcard fields to HTML using MarkdownService
-			const flashcardHtmlFields: Record<string, string> = {};
-			for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
-				flashcardHtmlFields[fieldName] = MarkdownService.renderToHtml(fieldValue);
-			}
-			
-			const ankiFields = ankiNoteData.fields || {};
-			
+			// Convert flashcard to HTML version for comparison
+			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard);
+
 			// Check all Anki fields (so we catch missing fields in flashcard)
-			for (const [fieldName, ankiField] of Object.entries(ankiFields)) {
-				const flashcardHtml = flashcardHtmlFields[fieldName] || '';
+			for (const [fieldName, ankiField] of Object.entries(ankiNoteData.htmlFields)) {
+				const flashcardHtml = htmlFlashcard.htmlFields[fieldName] || '';
 				const ankiHtml = ankiField?.value || '';
 				
 				// Direct HTML comparison
@@ -590,7 +585,7 @@ export class SyncConfirmationModal extends Modal {
 				console.log(`${index + 1}. Anki Note ID: ${ankiNote.noteId}`, {
 					noteType: ankiNote.modelName,
 					tags: ankiNote.tags,
-					fields: Object.keys(ankiNote.fields || {}),
+					htmlFields: Object.keys(ankiNote.htmlFields),
 					status: 'exists in Anki but not in vault',
 					action: 'will be deleted from Anki',
 					data: ankiNote
@@ -684,22 +679,20 @@ export class SyncConfirmationModal extends Modal {
 		
 		for (const ankiNote of this.analysis.deletedAnkiNotes.slice(0, 5)) {
 			const item = this.createFlashcardItem(content as any, 'sync-flashcard-deleted');
-			
-			// Convert to flashcard to get sourcePath
-			const ankiAsFlashcard = this.ankiService.toFlashcard(ankiNote, ankiNote.modelName);
+			const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote, ankiNote.modelName);
 			
 			// Show source path and Anki ID
 			const idRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
 			
-			if (ankiAsFlashcard.sourcePath) {
+			if (ankiAsHtmlFlashcard.sourcePath) {
 				const fileLink = idRef.createEl('a', { 
 					cls: 'sync-flashcard-file sync-flashcard-file-link',
-					text: ankiAsFlashcard.sourcePath,
+					text: ankiAsHtmlFlashcard.sourcePath,
 					href: '#'
 				});
 				fileLink.addEventListener('click', (e) => {
 					e.preventDefault();
-					this.app.workspace.openLinkText(ankiAsFlashcard.sourcePath, '', false);
+					this.app.workspace.openLinkText(ankiAsHtmlFlashcard.sourcePath, '', false);
 				});
 				idRef.createEl('span', { 
 					cls: 'sync-flashcard-anki-id',
@@ -712,8 +705,10 @@ export class SyncConfirmationModal extends Modal {
 				});
 			}
 			
-			// Render the deleted flashcard
-			this.renderFlashcard(item, ankiAsFlashcard);
+			// Render the deleted flashcard using FlashcardRenderer directly
+			const flashcardContainer = item.createEl('div');
+			const renderer = new FlashcardRenderer(flashcardContainer, ankiAsHtmlFlashcard);
+			renderer.onload();
 		}
 		
 		this.addMoreItemsIndicator(content as any, this.analysis.deletedAnkiNotes.length, 5);
@@ -786,7 +781,8 @@ export class SyncConfirmationModal extends Modal {
 
 	private renderFlashcard(container: HTMLElement, flashcard: Flashcard) {
 		const flashcardContainer = container.createEl('div');
-		const renderer = new FlashcardRenderer(flashcardContainer, flashcard);
+		const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard);
+		const renderer = new FlashcardRenderer(flashcardContainer, htmlFlashcard);
 		renderer.onload()
 	}
 
@@ -813,14 +809,17 @@ export class SyncConfirmationModal extends Modal {
 		obsidianSide.createEl('h5', { text: 'Obsidian Version (New)' });
 		const obsidianContainer = obsidianSide.createEl('div', { cls: 'sync-diff-flashcard-container sync-diff-new' });
 		
-		// Convert Anki note to Flashcard format
-		const ankiAsFlashcard = this.ankiService.toFlashcard(ankiNote, obsidian.noteType);
+		// Convert Anki note to HtmlFlashcard format (already HTML)
+		const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote, obsidian.noteType);
+		
+		// Convert Obsidian flashcard to HTML format
+		const obsidianAsHtmlFlashcard = MarkdownService.toHtmlFlashcard(obsidian);
 		
 		// Render both versions using the existing FlashcardRenderer
-		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsFlashcard);
+		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsHtmlFlashcard);
 		ankiRenderer.onload();
 		
-		const obsidianRenderer = new FlashcardRenderer(obsidianContainer, obsidian);
+		const obsidianRenderer = new FlashcardRenderer(obsidianContainer, obsidianAsHtmlFlashcard);
 		obsidianRenderer.onload();
 	}
 }

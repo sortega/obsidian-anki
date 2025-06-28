@@ -14,12 +14,20 @@ export interface FlashcardBlock {
 	lineEnd: number;
 }
 
-// Valid flashcard with parsed content
+// Valid flashcard with Markdown content
 export interface Flashcard extends FlashcardBlock {
 	noteType: string;
 	ankiId?: number;  // Missing for new, yet to be synced cards
 	tags: string[];
-	contentFields: Record<string, string>;
+	contentFields: Record<string, string>; // markdown content
+}
+
+// HTML flashcard with rendered content (for display/comparison)
+export interface HtmlFlashcard extends FlashcardBlock {
+	noteType: string;
+	ankiId?: number;
+	tags: string[];
+	htmlFields: Record<string, string>; // HTML content
 }
 
 // Invalid flashcard with parsing error
@@ -206,3 +214,4 @@ export class BlockFlashcardParser {
 		}
 	}
 }
+

@@ -1,5 +1,5 @@
 import { YankiConnect } from 'yanki-connect';
-import { Flashcard, NoteType } from './flashcard';
+import { Flashcard, HtmlFlashcard, NoteType } from './flashcard';
 import { OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_SYNC_TAG, OBSIDIAN_FILE_TAG_PREFIX } from './constants';
 const TurndownService = require('turndown');
 
@@ -17,7 +17,7 @@ export interface AnkiNoteField {
 
 export interface AnkiNote {
 	noteId: number;
-	fields: Record<string, AnkiNoteField>;
+	htmlFields: Record<string, AnkiNoteField>;
 	tags: string[];
 	modelName: string;
 	cards: number[];
@@ -67,9 +67,9 @@ export interface AnkiService {
 	convertOrphanedNoteToFlashcard(ankiNote: AnkiNote): Flashcard;
 	
 	/**
-	 * Convert an AnkiNote to Flashcard format for display (keeps HTML)
+	 * Convert an AnkiNote to HtmlFlashcard format for display
 	 */
-	toFlashcard(ankiNote: AnkiNote, noteType: string): Flashcard;
+	toHtmlFlashcard(ankiNote: AnkiNote, noteType: string): HtmlFlashcard;
 	
 	/**
 	 * Filter tags (excluding obsidian-* tags and ignored tags)
@@ -134,10 +134,16 @@ export class YankiConnectAnkiService implements AnkiService {
 		
 		const notes = await this.yankiConnect.note.notesInfo({ notes: noteIds });
 		
-		// Filter out any null/undefined responses and ensure proper typing
-		return notes.filter((note): note is AnkiNote => 
+		// Convert notes from yanki-connect format to our AnkiNote format
+		return notes.filter(note => 
 			note !== null && note !== undefined && note.noteId !== undefined
-		) as AnkiNote[];
+		).map(note => ({
+			noteId: note.noteId,
+			htmlFields: note.fields || {},
+			tags: note.tags || [],
+			modelName: note.modelName,
+			cards: note.cards || []
+		}));
 	}
 	
 	async createNote(flashcard: Flashcard, deckName: string, vaultName: string): Promise<number> {
@@ -199,10 +205,13 @@ export class YankiConnectAnkiService implements AnkiService {
 		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
 		if (fileTag) {
 			return fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length);
-		} else if (ankiNote.fields && ankiNote.fields['ObsidianNote']) {
-			// Fallback to ObsidianNote field
-			return ankiNote.fields['ObsidianNote'].value;
 		}
+
+		// Fallback to ObsidianNote field
+		if (ankiNote.htmlFields['ObsidianNote']) {
+			return ankiNote.htmlFields['ObsidianNote'].value;
+		}
+
 		return '';
 	}
 
@@ -219,7 +228,7 @@ export class YankiConnectAnkiService implements AnkiService {
 		const contentFields: Record<string, string> = {};
 		
 		// Add field content (convert HTML to markdown)
-		for (const [fieldName, fieldData] of Object.entries(ankiNote.fields || {})) {
+		for (const [fieldName, fieldData] of Object.entries(ankiNote.htmlFields || {})) {
 			if (fieldName === 'ObsidianNote') continue; // Skip metadata field
 			
 			let fieldValue = fieldData.value || '';
@@ -248,13 +257,13 @@ export class YankiConnectAnkiService implements AnkiService {
 		};
 	}
 
-	toFlashcard(ankiNote: AnkiNote, noteType: string): Flashcard {
-		const contentFields: Record<string, string> = {};
+	toHtmlFlashcard(ankiNote: AnkiNote, noteType: string): HtmlFlashcard {
+		const htmlFields: Record<string, string> = {};
 		
-		// Convert Anki fields to content fields (keep HTML for display)
-		for (const [fieldName, fieldData] of Object.entries(ankiNote.fields || {})) {
+		// Convert Anki htmlFields to htmlFields (keep HTML for display)
+		for (const [fieldName, fieldData] of Object.entries(ankiNote.htmlFields || {})) {
 			// Keep HTML tags since FlashcardRenderer can handle them properly
-			contentFields[fieldName] = fieldData.value || '';
+			htmlFields[fieldName] = fieldData.value || '';
 		}
 		
 		return {
@@ -262,7 +271,7 @@ export class YankiConnectAnkiService implements AnkiService {
 			lineStart: 0, // We don't have line info for Anki notes
 			lineEnd: 0,
 			noteType: noteType,
-			contentFields: contentFields,
+			htmlFields: htmlFields,
 			tags: this.filterUserTags(ankiNote.tags),
 			ankiId: ankiNote.noteId
 		};

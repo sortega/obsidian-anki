@@ -692,3 +692,10 @@ If your plugin does not need CSS, delete this file.
 .theme-dark .sync-progress-bar {
     background: var(--interactive-accent);
 }
+
+/* Settings styles */
+.obsidian-anki-ignored-tags-input {
+    width: 400px !important;
+    height: 60px !important;
+    resize: none !important;
+}

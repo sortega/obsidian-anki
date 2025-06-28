@@ -1,26 +1,17 @@
 import { MarkdownRenderChild, MarkdownPostProcessorContext } from 'obsidian';
-import { Flashcard, InvalidFlashcard, BlockFlashcardParser } from './flashcard';
+import { Flashcard, HtmlFlashcard, InvalidFlashcard, BlockFlashcardParser } from './flashcard';
 import { MarkdownService } from './markdown-service';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
-	private flashcard: Flashcard;
+	private htmlFlashcard: HtmlFlashcard;
 
-	constructor(containerEl: HTMLElement, flashcard: Flashcard) {
+	constructor(containerEl: HTMLElement, htmlFlashcard: HtmlFlashcard) {
 		super(containerEl);
-		this.flashcard = flashcard;
+		this.htmlFlashcard = htmlFlashcard;
 	}
 
 	onload() {
 		this.render();
-	}
-
-	// Render flashcard fields to HTML using MarkdownService
-	renderFlashcardFields(): Record<string, string> {
-		const renderedFields: Record<string, string> = {};
-		for (const [fieldName, fieldValue] of Object.entries(this.flashcard.contentFields)) {
-			renderedFields[fieldName] = MarkdownService.renderToHtml(fieldValue);
-		}
-		return renderedFields;
 	}
 
 	private render() {
@@ -31,12 +22,12 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Header with note type
 		const header = containerEl.createEl('div', { cls: 'flashcard-header' });
 		header.createEl('span', { 
-			text: `Note Type: ${this.flashcard.noteType}`,
+			text: `Note Type: ${this.htmlFlashcard.noteType}`,
 			cls: 'flashcard-note-type'
 		});
 
 		// Add NEW indicator if flashcard hasn't been synced yet
-		if (!this.flashcard.ankiId) {
+		if (!this.htmlFlashcard.ankiId) {
 			header.createEl('span', { 
 				text: 'NEW',
 				cls: 'flashcard-new-indicator'
@@ -46,9 +37,8 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Content area
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
-		// Render all content fields using HTML
-		const htmlFields = this.renderFlashcardFields();
-		for (const [fieldName, htmlContent] of Object.entries(htmlFields)) {
+		// Render all HTML fields
+		for (const [fieldName, htmlContent] of Object.entries(this.htmlFlashcard.htmlFields)) {
 			const fieldContainer = content.createEl('div', { cls: 'flashcard-field' });
 			
 			// Field label
@@ -63,7 +53,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		}
 
 		// Footer with tags if present (filter out obsidian-* internal tags)
-		const visibleTags = this.flashcard.tags.filter((tag: string) => !tag.startsWith('obsidian-'));
+		const visibleTags = this.htmlFlashcard.tags.filter((tag: string) => !tag.startsWith('obsidian-'));
 		if (visibleTags.length > 0) {
 			const footer = containerEl.createEl('div', { cls: 'flashcard-footer' });
 			const tagsLabel = footer.createEl('span', { 
@@ -120,8 +110,9 @@ export class FlashcardCodeBlockProcessor {
 			code.textContent = source;
 			code.className = 'language-yaml';
 		} else {
-			// Valid flashcard - render it
-			const renderer = new FlashcardRenderer(el, flashcard);
+			// Valid flashcard - convert to HTML and render it
+			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard);
+			const renderer = new FlashcardRenderer(el, htmlFlashcard);
 			ctx.addChild(renderer);
 		}
 	}

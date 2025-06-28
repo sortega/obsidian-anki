@@ -26,7 +26,9 @@ The plugin follows hexagonal architecture principles with clean separation betwe
 - **Main entry point**: `main.ts` - Contains the `ObsidianAnkiPlugin` class
 - **Settings management**: Handled through `PluginSettings` interface and `ObsidianAnkiSettingTab` class
 - **Anki integration**: Uses hexagonal architecture with `AnkiService` interface (port) and `YankiConnectAnkiService` adapter
-- **Domain layer**: `AnkiNoteType` and `AnkiNote` interfaces for structured data
+- **Domain layer**: Clear separation between `Flashcard` (markdown content) and `HtmlFlashcard` (rendered HTML) types
+- **Type Safety**: `AnkiNote` interface uses `htmlFields` for consistent HTML content handling
+- **Content Rendering**: `MarkdownService` handles markdown-to-HTML conversion with `toHtmlFlashcard()` method
 - **Build system**: esbuild configuration in `esbuild.config.mjs` bundles TypeScript to `main.js`
 
 ## Key Components
@@ -35,7 +37,8 @@ The plugin follows hexagonal architecture principles with clean separation betwe
 - `AnkiService` - Interface (port) defining Anki operations needed by the application
 - `YankiConnectAnkiService` - Adapter implementing AnkiService using yanki-connect library
 - `FlashcardInsertModal` - Modal for selecting note types and inserting flashcard blocks
-- `FlashcardRenderer` - Renders valid flashcards with proper styling and markdown support
+- `FlashcardRenderer` - Renders `HtmlFlashcard` objects with proper styling (accepts pre-rendered HTML content)
+- `MarkdownService` - Handles markdown-to-HTML conversion and provides `toHtmlFlashcard()` conversion method
 - `FlashcardCodeBlockProcessor` - Orchestrates flashcard code block processing and error display
 - `BlockFlashcardParser` - Parses YAML-formatted flashcard content with detailed error reporting
 - `ObsidianAnkiSettingTab` - Settings interface for plugin configuration and note type cache
@@ -58,6 +61,15 @@ Tags:
 
 **Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `Tags: "topic1, topic2"` are not supported and will cause parsing errors.
 
+## Settings Interface
+
+The plugin provides an improved settings interface with:
+
+- **Reordered Settings**: Ignored tags configuration moved to second position for better prominence
+- **Enhanced UI**: Wider, non-resizable text area for ignored tags with CSS-based styling
+- **Tag Filtering**: Configure tags to ignore during sync (default: `marked`, `leech`)
+- **Note Type Cache**: View and manage cached Anki note types from last successful connection
+
 ## Tag Filtering
 
 The plugin supports ignoring specific tags during sync operations to avoid unnecessary changes:
@@ -69,12 +81,14 @@ The plugin supports ignoring specific tags during sync operations to avoid unnec
 
 ## Flashcard Rendering
 
-The plugin now includes comprehensive flashcard rendering with:
+The plugin includes comprehensive flashcard rendering with improved type safety:
 
+- **Type-Safe Rendering** - `FlashcardRenderer` accepts `HtmlFlashcard` objects with pre-rendered HTML content
+- **Separation of Concerns** - `Flashcard` contains markdown content, `HtmlFlashcard` contains HTML content
 - **Visual flashcard display** - Styled cards with note type headers, field content, and tags
 - **Error handling** - Invalid flashcards show with red border and detailed error messages
 - **Hover tooltips** - Error icons display specific parsing issues on hover
-- **Markdown support** - Field content supports full Obsidian markdown rendering
+- **Markdown support** - Content converted from markdown to HTML via `MarkdownService.toHtmlFlashcard()`
 - **Fallback display** - Invalid flashcards still show original YAML content for editing
 - **Robust YAML parsing** - Uses js-yaml library for proper YAML syntax support
 - **Advanced YAML features** - Supports multiline strings (|, >), arrays, quoted strings, and complex structures
@@ -122,3 +136,6 @@ your Obsidian notes:
 ## Development Guidelines
 
 - Don't commit changes to git unless being told
+- Use CSS classes instead of inline styles for UI components
+- Maintain type safety with separate `Flashcard` (markdown) and `HtmlFlashcard` (HTML) interfaces
+- Place content conversion logic in `MarkdownService` for consistency

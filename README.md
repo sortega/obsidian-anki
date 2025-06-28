@@ -96,9 +96,9 @@ your Obsidian notes:
 ## Configuration
 
 Access plugin settings through Settings → Plugin Options → Obsidian Anki:
-- View cached note types from your last Anki connection
-- Reset note type cache if needed
-- Configure ignored tags (default: marked, leech) to exclude during sync
+- **Default Deck**: Choose where new flashcards will be created in Anki
+- **Ignored Tags**: Configure tags to ignore during sync (default: marked, leech)
+- **Note Type Cache**: View cached note types from your last Anki connection and reset if needed
 
 ## Development
 

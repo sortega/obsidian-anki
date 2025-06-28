@@ -18,7 +18,7 @@ describe('YankiConnectAnkiService', () => {
     const createMockAnkiNote = (overrides: Partial<AnkiNote> = {}): AnkiNote => ({
       noteId: 12345,
       modelName: 'Basic',
-      fields: {
+      htmlFields: {
         Front: { value: '<p>What is <strong>2+2</strong>?</p>', order: 0 },
         Back: { value: '<p>The answer is <em>4</em></p>', order: 1 },
       },
@@ -48,7 +48,7 @@ describe('YankiConnectAnkiService', () => {
 
     it('should extract source path from ObsidianNote field when no file tag exists', () => {
       const ankiNote = createMockAnkiNote({
-        fields: {
+        htmlFields: {
           Front: { value: 'Question', order: 0 },
           Back: { value: 'Answer', order: 1 },
           ObsidianNote: { value: 'Notes/My Note.md', order: 2 },
@@ -64,7 +64,7 @@ describe('YankiConnectAnkiService', () => {
 
     it('should prioritize obsidian-file:: tag over ObsidianNote field for source path', () => {
       const ankiNote = createMockAnkiNote({
-        fields: {
+        htmlFields: {
           Front: { value: 'Question', order: 0 },
           Back: { value: 'Answer', order: 1 },
           ObsidianNote: { value: 'Notes/Old Path.md', order: 2 },
@@ -101,7 +101,7 @@ describe('YankiConnectAnkiService', () => {
 
     it('should handle empty or missing fields gracefully', () => {
       const ankiNote = createMockAnkiNote({
-        fields: {
+        htmlFields: {
           Front: { value: '', order: 0 },
           Back: { value: '   ', order: 1 }, // whitespace only
           Empty: { value: '', order: 2 },
@@ -129,7 +129,7 @@ describe('YankiConnectAnkiService', () => {
       (service as any).turndownService.turndown = mockTurndown;
 
       const ankiNote = createMockAnkiNote({
-        fields: {
+        htmlFields: {
           Front: { value: '<malformed><tag>Problematic HTML</malformed>', order: 0 },
           Back: { value: '<p>Normal content</p>', order: 1 },
         },
@@ -153,7 +153,7 @@ describe('YankiConnectAnkiService', () => {
 
     it('should handle notes with no fields', () => {
       const ankiNote = createMockAnkiNote({
-        fields: {},
+        htmlFields: {},
       });
 
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
@@ -163,7 +163,7 @@ describe('YankiConnectAnkiService', () => {
 
     it('should handle notes with undefined/null field values', () => {
       const ankiNote = createMockAnkiNote({
-        fields: {
+        htmlFields: {
           Front: { value: '<strong>Good content</strong>', order: 0 },
           Back: { value: null as any, order: 1 },
           Extra: { value: undefined as any, order: 2 },
@@ -201,7 +201,7 @@ describe('YankiConnectAnkiService', () => {
 
     it('should preserve complex HTML structures in content fields', () => {
       const ankiNote = createMockAnkiNote({
-        fields: {
+        htmlFields: {
           Front: { value: '<div><h3>Complex</h3><ul><li>List <strong>item</strong></li></ul></div>', order: 0 },
         },
       });
@@ -214,7 +214,7 @@ describe('YankiConnectAnkiService', () => {
     it('should handle complex note types and field names', () => {
       const ankiNote = createMockAnkiNote({
         modelName: 'Cloze (Custom)',
-        fields: {
+        htmlFields: {
           'Text': { value: 'Some text', order: 0 },
           'Extra Field Name': { value: 'Extra content', order: 1 },
           'Field-With-Dashes': { value: 'Dash content', order: 2 },
@@ -232,7 +232,7 @@ describe('YankiConnectAnkiService', () => {
     it('should preserve cloze deletion syntax', () => {
       const ankiNote = createMockAnkiNote({
         modelName: 'Cloze',
-        fields: {
+        htmlFields: {
           Text: { value: 'The capital of {{c1::France}} is {{c2::Paris}}.', order: 0 },
           'Back Extra': { value: '', order: 1 },
         },
@@ -247,10 +247,10 @@ describe('YankiConnectAnkiService', () => {
       expect(result.noteType).toBe('Cloze');
     });
 
-    describe('toFlashcard integration', () => {
+    describe('toHtmlFlashcard integration', () => {
       it('should prioritize obsidian-file:: tag over ObsidianNote field', () => {
         const ankiNote = createMockAnkiNote({
-          fields: {
+          htmlFields: {
             Front: { value: 'Question', order: 0 },
             Back: { value: 'Answer', order: 1 },
             ObsidianNote: { value: 'Notes/Old Path.md', order: 2 },
@@ -262,7 +262,7 @@ describe('YankiConnectAnkiService', () => {
           ],
         });
 
-        const result = service.toFlashcard(ankiNote, 'Basic');
+        const result = service.toHtmlFlashcard(ankiNote, 'Basic');
 
         expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
         expect(result.noteType).toBe('Basic');
@@ -270,7 +270,7 @@ describe('YankiConnectAnkiService', () => {
 
       it('should fallback to ObsidianNote field when no file tag exists', () => {
         const ankiNote = createMockAnkiNote({
-          fields: {
+          htmlFields: {
             Front: { value: 'Question', order: 0 },
             Back: { value: 'Answer', order: 1 },
             ObsidianNote: { value: 'Notes/My Note.md', order: 2 },
@@ -278,7 +278,7 @@ describe('YankiConnectAnkiService', () => {
           tags: ['user-tag', 'obsidian-synced'], // No file tag
         });
 
-        const result = service.toFlashcard(ankiNote, 'Basic');
+        const result = service.toHtmlFlashcard(ankiNote, 'Basic');
 
         expect(result.sourcePath).toBe('Notes/My Note.md');
       });
@@ -296,7 +296,7 @@ describe('YankiConnectAnkiService', () => {
         });
 
         const serviceWithCustomIgnored = new YankiConnectAnkiService(['marked', 'leech', 'custom-ignored']);
-        const result = serviceWithCustomIgnored.toFlashcard(ankiNote, 'Basic');
+        const result = serviceWithCustomIgnored.toHtmlFlashcard(ankiNote, 'Basic');
 
         expect(result.tags).toEqual(['user-tag', 'another-user-tag']); // Should filter out obsidian-* and ignored tags
       });
