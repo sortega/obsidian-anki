@@ -65,15 +65,32 @@ export interface AnkiService {
 	 * Convert an orphaned AnkiNote to a Flashcard with markdown content
 	 */
 	convertOrphanedNoteToFlashcard(ankiNote: AnkiNote): Flashcard;
+	
+	/**
+	 * Convert an AnkiNote to Flashcard format for display (keeps HTML)
+	 */
+	toFlashcard(ankiNote: AnkiNote, noteType: string): Flashcard;
+	
+	/**
+	 * Filter tags (excluding obsidian-* tags and ignored tags)
+	 */
+	filterUserTags(tags: string[]): string[];
+	
+	/**
+	 * Update the ignored tags configuration
+	 */
+	setIgnoredTags(ignoredTags: string[]): void;
 }
 
 // Adapter - YankiConnect implementation of AnkiService
 export class YankiConnectAnkiService implements AnkiService {
 	private yankiConnect: YankiConnect;
 	private turndownService: TurndownInstance;
+	private ignoredTags: string[];
 	
-	constructor() {
+	constructor(ignoredTags: string[] = []) {
 		this.yankiConnect = new YankiConnect();
+		this.ignoredTags = ignoredTags;
 		
 		// Initialize turndown service for HTML to markdown conversion
 		this.turndownService = new TurndownService({
@@ -174,6 +191,30 @@ export class YankiConnectAnkiService implements AnkiService {
 		});
 	}
 	
+	/**
+	 * Extract source path from AnkiNote with priority: obsidian-file:: tag > ObsidianNote field
+	 */
+	private extractSourcePath(ankiNote: AnkiNote): string {
+		// First, try to find obsidian-file:: tag (higher priority)
+		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
+		if (fileTag) {
+			return fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length);
+		} else if (ankiNote.fields && ankiNote.fields['ObsidianNote']) {
+			// Fallback to ObsidianNote field
+			return ankiNote.fields['ObsidianNote'].value;
+		}
+		return '';
+	}
+
+	/**
+	 * Filter tags (excluding obsidian-* tags and ignored tags)
+	 */
+	filterUserTags(tags: string[]): string[] {
+		return (tags || []).filter(tag => 
+			!tag.startsWith('obsidian-') && !this.ignoredTags.includes(tag)
+		);
+	}
+
 	convertOrphanedNoteToFlashcard(ankiNote: AnkiNote): Flashcard {
 		const contentFields: Record<string, string> = {};
 		
@@ -190,75 +231,45 @@ export class YankiConnectAnkiService implements AnkiService {
 				} catch (error) {
 					console.warn(`Failed to convert HTML to markdown for field ${fieldName}:`, error);
 					// Keep original HTML if conversion fails - better to preserve content than lose it
-					// No need to trim again since we already checked fieldValue.trim() above
 				}
 			}
 			
 			contentFields[fieldName] = fieldValue;
 		}
 		
-		// Extract source path with priority: obsidian-file:: tag > ObsidianNote field
-		let sourcePath = '';
-		
-		// First, try to find obsidian-file:: tag (higher priority)
-		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
-		if (fileTag) {
-			sourcePath = fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length);
-		} else if (ankiNote.fields && ankiNote.fields['ObsidianNote']) {
-			// Fallback to ObsidianNote field
-			sourcePath = ankiNote.fields['ObsidianNote'].value;
-		}
-		
-		// Add tags (excluding obsidian-* tags)
-		const userTags = (ankiNote.tags || []).filter(tag => !tag.startsWith('obsidian-'));
-		
 		return {
-			sourcePath,
+			sourcePath: this.extractSourcePath(ankiNote),
 			lineStart: 0, // We don't have line info for orphaned notes
 			lineEnd: 0,
 			noteType: ankiNote.modelName,
 			contentFields: contentFields,
-			tags: userTags,
+			tags: this.filterUserTags(ankiNote.tags),
 			ankiId: ankiNote.noteId
 		};
 	}
-	
-}
 
-// Utility functions for converting between Anki and Obsidian data formats
-export class AnkiDataConverter {
-	/**
-	 * Converts an AnkiNote to Flashcard format
-	 */
-	static toFlashcard(ankiNote: AnkiNote, noteType: string): Flashcard {
+	toFlashcard(ankiNote: AnkiNote, noteType: string): Flashcard {
 		const contentFields: Record<string, string> = {};
 		
-		// Convert Anki fields to content fields
+		// Convert Anki fields to content fields (keep HTML for display)
 		for (const [fieldName, fieldData] of Object.entries(ankiNote.fields || {})) {
 			// Keep HTML tags since FlashcardRenderer can handle them properly
 			contentFields[fieldName] = fieldData.value || '';
 		}
 		
-		// Extract source path with priority: obsidian-file:: tag > ObsidianNote field
-		let sourcePath = '';
-		
-		// First, try to find obsidian-file:: tag (higher priority)
-		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
-		if (fileTag) {
-			sourcePath = fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length);
-		} else if (ankiNote.fields && ankiNote.fields['ObsidianNote']) {
-			// Fallback to ObsidianNote field
-			sourcePath = ankiNote.fields['ObsidianNote'].value;
-		}
-		
 		return {
-			sourcePath: sourcePath,
+			sourcePath: this.extractSourcePath(ankiNote),
 			lineStart: 0, // We don't have line info for Anki notes
 			lineEnd: 0,
 			noteType: noteType,
 			contentFields: contentFields,
-			tags: ankiNote.tags || [],
+			tags: this.filterUserTags(ankiNote.tags),
 			ankiId: ankiNote.noteId
 		};
 	}
+	
+	setIgnoredTags(ignoredTags: string[]): void {
+		this.ignoredTags = ignoredTags;
+	}
+	
 }

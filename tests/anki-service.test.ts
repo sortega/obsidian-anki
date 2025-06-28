@@ -3,7 +3,7 @@ jest.mock('yanki-connect', () => ({
   YankiConnect: jest.fn().mockImplementation(() => ({})),
 }), { virtual: true });
 
-import { YankiConnectAnkiService, AnkiNote, AnkiDataConverter } from '../anki-service';
+import { YankiConnectAnkiService, AnkiNote } from '../anki-service';
 import { Flashcard } from '../flashcard';
 
 describe('YankiConnectAnkiService', () => {
@@ -11,7 +11,7 @@ describe('YankiConnectAnkiService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new YankiConnectAnkiService();
+    service = new YankiConnectAnkiService(['marked', 'leech']);
   });
 
   describe('convertOrphanedNoteToFlashcard', () => {
@@ -247,7 +247,7 @@ describe('YankiConnectAnkiService', () => {
       expect(result.noteType).toBe('Cloze');
     });
 
-    describe('AnkiDataConverter integration', () => {
+    describe('toFlashcard integration', () => {
       it('should prioritize obsidian-file:: tag over ObsidianNote field', () => {
         const ankiNote = createMockAnkiNote({
           fields: {
@@ -262,7 +262,7 @@ describe('YankiConnectAnkiService', () => {
           ],
         });
 
-        const result = AnkiDataConverter.toFlashcard(ankiNote, 'Basic');
+        const result = service.toFlashcard(ankiNote, 'Basic');
 
         expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
         expect(result.noteType).toBe('Basic');
@@ -278,9 +278,131 @@ describe('YankiConnectAnkiService', () => {
           tags: ['user-tag', 'obsidian-synced'], // No file tag
         });
 
-        const result = AnkiDataConverter.toFlashcard(ankiNote, 'Basic');
+        const result = service.toFlashcard(ankiNote, 'Basic');
 
         expect(result.sourcePath).toBe('Notes/My Note.md');
+      });
+
+      it('should filter out ignored tags', () => {
+        const ankiNote = createMockAnkiNote({
+          tags: [
+            'user-tag',
+            'marked',
+            'leech',
+            'obsidian-synced',
+            'another-user-tag',
+            'custom-ignored'
+          ],
+        });
+
+        const serviceWithCustomIgnored = new YankiConnectAnkiService(['marked', 'leech', 'custom-ignored']);
+        const result = serviceWithCustomIgnored.toFlashcard(ankiNote, 'Basic');
+
+        expect(result.tags).toEqual(['user-tag', 'another-user-tag']); // Should filter out obsidian-* and ignored tags
+      });
+    });
+
+    describe('ignored tags functionality', () => {
+      it('should filter ignored tags in convertOrphanedNoteToFlashcard', () => {
+        const ankiNote = createMockAnkiNote({
+          tags: [
+            'user-tag',
+            'marked',
+            'leech',
+            'obsidian-synced',
+            'study-tag'
+          ],
+        });
+
+        const result = service.convertOrphanedNoteToFlashcard(ankiNote);
+
+        expect(result.tags).toEqual(['user-tag', 'study-tag']); // Should exclude obsidian-* and ignored tags
+      });
+
+      it('should handle empty ignored tags array', () => {
+        const ankiNote = createMockAnkiNote({
+          tags: [
+            'user-tag',
+            'marked',
+            'leech',
+            'obsidian-synced'
+          ],
+        });
+
+        // Test with service that has no ignored tags
+        const serviceWithNoIgnored = new YankiConnectAnkiService([]);
+        const result = serviceWithNoIgnored.convertOrphanedNoteToFlashcard(ankiNote);
+
+        expect(result.tags).toEqual(['user-tag', 'marked', 'leech']); // Should only exclude obsidian-* tags
+      });
+
+      it('should handle notes with no tags to ignore', () => {
+        const ankiNote = createMockAnkiNote({
+          tags: [
+            'user-tag',
+            'study-tag',
+            'obsidian-synced'
+          ],
+        });
+
+        const result = service.convertOrphanedNoteToFlashcard(ankiNote);
+
+        expect(result.tags).toEqual(['user-tag', 'study-tag']); // Should only exclude obsidian-* tags
+      });
+    });
+
+    describe('filterUserTags', () => {
+      it('should filter out obsidian tags and ignored tags', () => {
+        const tags = [
+          'user-tag',
+          'marked',
+          'leech',
+          'obsidian-synced',
+          'obsidian-vault::test',
+          'study-tag'
+        ];
+
+        const result = service.filterUserTags(tags);
+
+        expect(result).toEqual(['user-tag', 'study-tag']); // Should exclude obsidian-* and ignored tags
+      });
+
+      it('should handle empty tags array', () => {
+        const result = service.filterUserTags([]);
+        expect(result).toEqual([]);
+      });
+
+      it('should handle null/undefined tags', () => {
+        const result = service.filterUserTags(null as any);
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe('setIgnoredTags', () => {
+      it('should update ignored tags and affect tag filtering', () => {
+        const tags = ['user-tag', 'marked', 'leech', 'new-ignored-tag'];
+
+        // Initial filtering with default ignored tags
+        const initialResult = service.filterUserTags(tags);
+        expect(initialResult).toEqual(['user-tag', 'new-ignored-tag']);
+
+        // Update ignored tags
+        service.setIgnoredTags(['marked', 'leech', 'new-ignored-tag']);
+
+        // Should now filter out the new ignored tag
+        const updatedResult = service.filterUserTags(tags);
+        expect(updatedResult).toEqual(['user-tag']);
+      });
+
+      it('should work with empty ignored tags', () => {
+        const tags = ['user-tag', 'marked', 'leech', 'obsidian-synced'];
+
+        // Update to empty ignored tags
+        service.setIgnoredTags([]);
+
+        // Should only filter obsidian-* tags
+        const result = service.filterUserTags(tags);
+        expect(result).toEqual(['user-tag', 'marked', 'leech']);
       });
     });
   });

@@ -98,7 +98,7 @@ your Obsidian notes:
 Access plugin settings through Settings → Plugin Options → Obsidian Anki:
 - View cached note types from your last Anki connection
 - Reset note type cache if needed
-- Configure sync preferences (coming soon)
+- Configure ignored tags (default: marked, leech) to exclude during sync
 
 ## Development
 

@@ -58,6 +58,15 @@ Tags:
 
 **Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `Tags: "topic1, topic2"` are not supported and will cause parsing errors.
 
+## Tag Filtering
+
+The plugin supports ignoring specific tags during sync operations to avoid unnecessary changes:
+
+- **Ignored Tags**: Configure tags to ignore during sync in plugin settings (default: `marked`, `leech`)
+- **Automatic Filtering**: These tags are filtered out when converting Anki notes to flashcards and during tag comparison
+- **No False Changes**: Cards won't be marked as "changed" just because of ignored tag differences
+- **Import Support**: Ignored tags are also filtered when importing orphaned Anki cards back to Obsidian
+
 ## Flashcard Rendering
 
 The plugin now includes comprehensive flashcard rendering with:

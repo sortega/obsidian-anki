@@ -80,5 +80,22 @@ export class ObsidianAnkiSettingTab extends PluginSettingTab {
 				fieldsText.style.color = 'var(--text-muted)';
 			}
 		}
+
+		// Ignored Tags setting
+		new Setting(containerEl)
+			.setName('Ignored Tags')
+			.setDesc('Tags to ignore during sync (comma-separated). By default: marked, leech')
+			.addTextArea(text => text
+				.setPlaceholder('marked, leech')
+				.setValue(this.plugin.settings.ignoredTags.join(', '))
+				.onChange(async (value) => {
+					this.plugin.settings.ignoredTags = value
+						.split(',')
+						.map(tag => tag.trim())
+						.filter(tag => tag.length > 0);
+					await this.plugin.saveSettings();
+					// Update AnkiService with new ignored tags
+					this.plugin['ankiService'].setIgnoredTags(this.plugin.settings.ignoredTags);
+				}));
 	}
 }

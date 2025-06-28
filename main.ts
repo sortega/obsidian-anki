@@ -4,19 +4,21 @@ import { NoteType } from './flashcard';
 import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
 import { FlashcardCodeBlockProcessor } from './flashcard-renderer';
 import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-analysis';
-import { DEFAULT_NOTE_TYPE, DEFAULT_DECK } from './constants';
+import { DEFAULT_NOTE_TYPE, DEFAULT_DECK, DEFAULT_IGNORED_TAGS } from './constants';
 import { ObsidianAnkiSettingTab } from './setting-tab';
 
 interface PluginSettings {
 	lastUsedNoteType: string;
 	availableNoteTypes: NoteType[];
 	defaultDeck: string;
+	ignoredTags: string[];
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
 	lastUsedNoteType: DEFAULT_NOTE_TYPE,
 	availableNoteTypes: [],
-	defaultDeck: DEFAULT_DECK
+	defaultDeck: DEFAULT_DECK,
+	ignoredTags: DEFAULT_IGNORED_TAGS
 }
 
 export default class ObsidianAnkiPlugin extends Plugin {
@@ -30,7 +32,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		await this.loadSettings();
 
 		// Initialize Anki Service
-		this.ankiService = new YankiConnectAnkiService();
+		this.ankiService = new YankiConnectAnkiService(this.settings.ignoredTags);
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (evt: MouseEvent) => {

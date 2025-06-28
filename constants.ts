@@ -13,3 +13,6 @@ export const METADATA_FIELDS = ['NoteType', 'AnkiId', 'Tags'];
 
 // Import settings
 export const DEFAULT_IMPORT_FILE = 'Imported Flashcards.md';
+
+// Tag filtering
+export const DEFAULT_IGNORED_TAGS = ['marked', 'leech'];

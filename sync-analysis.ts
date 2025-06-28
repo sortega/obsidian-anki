@@ -1,5 +1,5 @@
 import { App, Modal, Notice, CachedMetadata, TFile, MarkdownView } from 'obsidian';
-import { AnkiService, AnkiNote, AnkiDataConverter } from './anki-service';
+import { AnkiService, AnkiNote } from './anki-service';
 import { NoteType } from './flashcard';
 import { Flashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser } from './flashcard';
 import { MarkdownService } from './markdown-service';
@@ -313,9 +313,9 @@ export class SyncProgressModal extends Modal {
 				}
 			}
 			
-			// Compare tags as sets, ignoring obsidian-* tags and order
-			const flashcardUserTags = new Set(flashcard.tags.filter(tag => !tag.startsWith('obsidian-')));
-			const ankiUserTags = new Set((ankiNoteData.tags || []).filter(tag => !tag.startsWith('obsidian-')));
+			// Compare tags as sets, ignoring obsidian-* tags, ignored tags, and order
+			const flashcardUserTags = new Set(this.ankiService.filterUserTags(flashcard.tags));
+			const ankiUserTags = new Set(this.ankiService.filterUserTags(ankiNoteData.tags || []));
 			
 			// Check if sets are equal (same tags, ignore order)
 			if (flashcardUserTags.size !== ankiUserTags.size) {
@@ -686,7 +686,7 @@ export class SyncConfirmationModal extends Modal {
 			const item = this.createFlashcardItem(content as any, 'sync-flashcard-deleted');
 			
 			// Convert to flashcard to get sourcePath
-			const ankiAsFlashcard = AnkiDataConverter.toFlashcard(ankiNote, ankiNote.modelName);
+			const ankiAsFlashcard = this.ankiService.toFlashcard(ankiNote, ankiNote.modelName);
 			
 			// Show source path and Anki ID
 			const idRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
@@ -814,7 +814,7 @@ export class SyncConfirmationModal extends Modal {
 		const obsidianContainer = obsidianSide.createEl('div', { cls: 'sync-diff-flashcard-container sync-diff-new' });
 		
 		// Convert Anki note to Flashcard format
-		const ankiAsFlashcard = AnkiDataConverter.toFlashcard(ankiNote, obsidian.noteType);
+		const ankiAsFlashcard = this.ankiService.toFlashcard(ankiNote, obsidian.noteType);
 		
 		// Render both versions using the existing FlashcardRenderer
 		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsFlashcard);
