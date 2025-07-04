@@ -1,5 +1,6 @@
 import { marked } from 'marked';
 import { Flashcard, HtmlFlashcard } from './flashcard';
+import { OBSIDIAN_SYNC_TAG, OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_FILE_TAG_PREFIX } from './constants';
 
 export class MarkdownService {
 	private static initialized = false;
@@ -27,20 +28,32 @@ export class MarkdownService {
 	}
 
 	// Convert Flashcard with markdown fields to HtmlFlashcard with HTML fields
-	static toHtmlFlashcard(flashcard: Flashcard): HtmlFlashcard {
+	static toHtmlFlashcard(flashcard: Flashcard, vaultName: string): HtmlFlashcard {
 		const htmlFields: Record<string, string> = {};
 		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
 			htmlFields[fieldName] = this.renderToHtml(fieldValue);
 		}
 		
+		const tags = [
+			...flashcard.tags,
+			OBSIDIAN_SYNC_TAG,
+			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`,
+		];
+
+		if (flashcard.sourcePath) {
+			tags.push(`${OBSIDIAN_FILE_TAG_PREFIX}${encodeURI(flashcard.sourcePath)}`);
+		}
+
+		tags.sort()
+
 		return {
 			sourcePath: flashcard.sourcePath,
 			lineStart: flashcard.lineStart,
 			lineEnd: flashcard.lineEnd,
 			noteType: flashcard.noteType,
 			ankiId: flashcard.ankiId,
-			tags: flashcard.tags,
-			htmlFields: htmlFields
+			tags,
+			htmlFields
 		};
 	}
 }

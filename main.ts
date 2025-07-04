@@ -83,7 +83,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 		// Register flashcard code block processor
 		this.registerMarkdownCodeBlockProcessor('flashcard', (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
-			FlashcardCodeBlockProcessor.render(source, el, ctx);
+			FlashcardCodeBlockProcessor.render(this.app.vault.getName(), source, el, ctx);
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin

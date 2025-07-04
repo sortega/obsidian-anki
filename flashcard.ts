@@ -22,7 +22,7 @@ export interface Flashcard extends FlashcardBlock {
 	contentFields: Record<string, string>; // markdown content
 }
 
-// HTML flashcard with rendered content (for display/comparison)
+// HTML flashcard with rendered content and metadata tags (for display/comparison)
 export interface HtmlFlashcard extends FlashcardBlock {
 	noteType: string;
 	ankiId?: number;
@@ -42,6 +42,10 @@ export class BlockFlashcardParser {
 	}
 
 	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, vaultName?: string, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
+		function invalidFlashcard(error: string): InvalidFlashcard {
+			return { sourcePath, lineStart, lineEnd, error };
+		}
+		
 		try {
 			// Trim whitespace
 			const trimmedSource = source.trim();
@@ -75,12 +79,7 @@ export class BlockFlashcardParser {
 			// Validate tags field - must be an array of strings if present
 			if ('Tags' in data && data.Tags !== undefined) {
 				if (!Array.isArray(data.Tags)) {
-					return {
-						sourcePath,
-						lineStart,
-						lineEnd,
-						error: 'Tags field must be a YAML list of strings. Use:\nTags:\n  - tag1\n  - tag2'
-					};
+					return invalidFlashcard('Tags field must be a YAML list of strings. Use:\nTags:\n  - tag1\n  - tag2');
 				}
 				
 				// Ensure all tags are non-empty strings
@@ -113,12 +112,7 @@ export class BlockFlashcardParser {
 					} else if (typeof value === 'number' || typeof value === 'boolean') {
 						contentFields[key] = String(value);
 					} else {
-						return {
-							sourcePath,
-							lineStart,
-							lineEnd,
-							error: `Field '${key}' must be a string, number, boolean, or null. Arrays and objects are not supported for content fields.`
-						};
+						return invalidFlashcard(`Field '${key}' must be a string, number, boolean, or null. Arrays and objects are not supported for content fields.`);
 					}
 					hasContentFields = true;
 				}
@@ -177,40 +171,19 @@ export class BlockFlashcardParser {
 					if (Number.isInteger(parsedId) && parsedId > 0) {
 						flashcard.ankiId = parsedId;
 					} else {
-						return {
-							sourcePath,
-							lineStart,
-							lineEnd,
-							error: `AnkiId must be a positive integer, got: ${data.AnkiId}`
-						};
+						return invalidFlashcard(`AnkiId must be a positive integer, got: ${data.AnkiId}`);
 					}
 				} else {
-					return {
-						sourcePath,
-						lineStart,
-						lineEnd,
-						error: `AnkiId must be a number or numeric string, got: ${typeof data.AnkiId}`
-					};
+					return invalidFlashcard(`AnkiId must be a number or numeric string, got: ${typeof data.AnkiId}`);
 				}
 			}
 
 			return flashcard;
 		} catch (error) {
 			if (error instanceof yaml.YAMLException) {
-				return {
-					sourcePath,
-					lineStart,
-					lineEnd,
-					error: `YAML parsing error: ${error.message}`
-				};
+				return invalidFlashcard(`YAML parsing error: ${error.message}`);
 			}
-			
-			return {
-				sourcePath,
-				lineStart,
-				lineEnd,
-				error: `Parsing error: ${error instanceof Error ? error.message : String(error)}`
-			};
+			return invalidFlashcard(`Parsing error: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 }

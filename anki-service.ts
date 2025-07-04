@@ -49,12 +49,12 @@ export interface AnkiService {
 	/**
 	 * Create a new note in Anki from a flashcard
 	 */
-	createNote(flashcard: Flashcard, deckName: string, vaultName: string): Promise<number>;
+	createNote(flashcard: HtmlFlashcard, deckName: string): Promise<number>;
 	
 	/**
 	 * Update an existing note in Anki with new flashcard data
 	 */
-	updateNote(ankiId: number, flashcard: Flashcard, vaultName: string): Promise<void>;
+	updateNote(ankiId: number, flashcard: HtmlFlashcard): Promise<void>;
 	
 	/**
 	 * Delete notes from Anki by their IDs
@@ -71,14 +71,8 @@ export interface AnkiService {
 	 */
 	toHtmlFlashcard(ankiNote: AnkiNote): HtmlFlashcard;
 	
-	/**
-	 * Filter tags (excluding obsidian-* tags and ignored tags)
-	 */
-	filterUserTags(tags: string[]): string[];
-	
-	/**
-	 * Update the ignored tags configuration
-	 */
+
+	filterIgnoredTags(tags: string[]): string[];
 	setIgnoredTags(ignoredTags: string[]): void;
 }
 
@@ -140,26 +134,19 @@ export class YankiConnectAnkiService implements AnkiService {
 		).map(note => ({
 			noteId: note.noteId,
 			htmlFields: note.fields || {},
-			tags: note.tags || [],
+			tags: this.filterIgnoredTags(note.tags || []),
 			modelName: note.modelName,
 			cards: note.cards || []
 		}));
 	}
 	
-	async createNote(flashcard: Flashcard, deckName: string, vaultName: string): Promise<number> {
-		// Build Anki tags including Obsidian vault tag
-		const ankiTags = [
-			...flashcard.tags,
-			OBSIDIAN_SYNC_TAG,
-			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`
-		];
-		
+	async createNote(flashcard: HtmlFlashcard, deckName: string): Promise<number> {
 		const noteId = await this.yankiConnect.note.addNote({
 			note: {
 				deckName: deckName,
 				modelName: flashcard.noteType,
-				fields: flashcard.contentFields,
-				tags: ankiTags
+				fields: flashcard.htmlFields,
+				tags: flashcard.tags
 			}
 		});
 		
@@ -170,19 +157,12 @@ export class YankiConnectAnkiService implements AnkiService {
 		return noteId;
 	}
 	
-	async updateNote(ankiId: number, flashcard: Flashcard, vaultName: string): Promise<void> {
-		// Build Anki tags including Obsidian vault tag
-		const ankiTags = [
-			...flashcard.tags,
-			OBSIDIAN_SYNC_TAG,
-			`${OBSIDIAN_VAULT_TAG_PREFIX}${vaultName}`
-		];
-		
+	async updateNote(ankiId: number, flashcard: HtmlFlashcard): Promise<void> {
 		await this.yankiConnect.note.updateNote({
 			note: {
 				id: ankiId,
-				fields: flashcard.contentFields,
-				tags: ankiTags
+				fields: flashcard.htmlFields,
+				tags: flashcard.tags
 			}
 		});
 	}
@@ -204,7 +184,7 @@ export class YankiConnectAnkiService implements AnkiService {
 		// First, try to find obsidian-file:: tag (higher priority)
 		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
 		if (fileTag) {
-			return fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length);
+			return decodeURI(fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length));
 		}
 
 		// Fallback to ObsidianNote field
@@ -215,12 +195,9 @@ export class YankiConnectAnkiService implements AnkiService {
 		return '';
 	}
 
-	/**
-	 * Filter tags (excluding obsidian-* tags and ignored tags)
-	 */
-	filterUserTags(tags: string[]): string[] {
+	filterIgnoredTags(tags: string[]): string[] {
 		return (tags || []).filter(tag => 
-			!tag.startsWith('obsidian-') && !this.ignoredTags.includes(tag)
+			!this.ignoredTags.includes(tag)
 		);
 	}
 
@@ -252,7 +229,7 @@ export class YankiConnectAnkiService implements AnkiService {
 			lineEnd: 0,
 			noteType: ankiNote.modelName,
 			contentFields: contentFields,
-			tags: this.filterUserTags(ankiNote.tags),
+			tags: this.filterIgnoredTags(ankiNote.tags),
 			ankiId: ankiNote.noteId
 		};
 	}
@@ -272,7 +249,7 @@ export class YankiConnectAnkiService implements AnkiService {
 			lineEnd: 0,
 			noteType: ankiNote.modelName,
 			htmlFields: htmlFields,
-			tags: this.filterUserTags(ankiNote.tags),
+			tags: this.filterIgnoredTags(ankiNote.tags),
 			ankiId: ankiNote.noteId
 		};
 	}

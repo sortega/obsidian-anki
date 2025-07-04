@@ -14,7 +14,7 @@ export interface SyncAnalysis {
 	unchangedFlashcards: number;
 	invalidFlashcards: InvalidFlashcard[];
 	deletedAnkiNotes: AnkiNote[];
-	ankiNotesData: Map<number, AnkiNote>;
+	ankiNotes: Map<number, AnkiNote>;
 }
 
 export class SyncProgressModal extends Modal {
@@ -41,7 +41,7 @@ export class SyncProgressModal extends Modal {
 			unchangedFlashcards: 0,
 			invalidFlashcards: [],
 			deletedAnkiNotes: [],
-			ankiNotesData: new Map()
+			ankiNotes: new Map()
 		};
 	}
 
@@ -122,7 +122,7 @@ export class SyncProgressModal extends Modal {
 		
 		// Fetch Anki note data for comparison (batch fetch for performance)
 		this.updateProgress(0.25, 'Fetching Anki note data for comparison...');
-		this.analysis.ankiNotesData = await this.fetchAnkiNoteData(ankiNoteIds);
+		this.analysis.ankiNotes = await this.fetchAnkiNotes(ankiNoteIds);
 
 		for (let i = 0; i < markdownFiles.length; i++) {
 			const file = markdownFiles[i];
@@ -136,32 +136,29 @@ export class SyncProgressModal extends Modal {
 
 				// Process and categorize each flashcard
 				for (const flashcard of flashcards) {
+					// Invalid flashcard
 					if ('error' in flashcard) {
-						// Invalid flashcard
 						this.analysis.invalidFlashcards.push(flashcard);
-					} else {
-						// Valid flashcard - categorize based on ankiId and content comparison
-						const ankiId = flashcard.ankiId;
-						if (ankiId) {
-							// Flashcard has ankiId - check if it exists in Anki
-							if (ankiNoteIds.includes(ankiId)) {
-								// Compare with Anki data to determine if changed
-								const ankiNoteData = this.analysis.ankiNotesData.get(ankiId);
-								if (ankiNoteData && await this.compareFlashcardWithAnki(flashcard, ankiNoteData)) {
-									this.analysis.unchangedFlashcards++;
-								} else if (ankiNoteData) {
-									this.analysis.changedFlashcards.push([ankiNoteData, flashcard]);
-								}
-								seenAnkiIds.add(ankiId);
-							} else {
-								// Card was deleted from Anki, treat as new
-								this.analysis.newFlashcards.push(flashcard);
-							}
-						} else {
-							// No ankiId - this is a new flashcard
-							this.analysis.newFlashcards.push(flashcard);
-						}
+						continue;
 					}
+
+					// Valid flashcard - categorize based on ankiId and content comparison
+					const ankiId = flashcard.ankiId;
+
+					// No ankiId or card was deleted from Anki - treat as new
+					if (!ankiId || !ankiNoteIds.includes(ankiId)) {
+						this.analysis.newFlashcards.push(flashcard);
+						continue;
+					}
+
+					// Compare with Anki data to determine if changed
+					const ankiNote = this.analysis.ankiNotes.get(ankiId);
+					if (ankiNote && this.compareFlashcardWithAnki(flashcard, ankiNote)) {
+						this.analysis.unchangedFlashcards++;
+					} else if (ankiNote) {
+						this.analysis.changedFlashcards.push([ankiNote, flashcard]);
+					}
+					seenAnkiIds.add(ankiId);
 				}
 			} catch (error) {
 				console.warn(`Failed to read file ${file.path}:`, error);
@@ -179,7 +176,7 @@ export class SyncProgressModal extends Modal {
 		this.updateProgress(0.95, 'Identifying deleted notes...');
 		for (const ankiId of ankiNoteIds) {
 			if (!seenAnkiIds.has(ankiId)) {
-				const ankiNote = this.analysis.ankiNotesData.get(ankiId);
+				const ankiNote = this.analysis.ankiNotes.get(ankiId);
 				if (ankiNote) {
 					this.analysis.deletedAnkiNotes.push(ankiNote);
 				}
@@ -217,84 +214,87 @@ export class SyncProgressModal extends Modal {
 			const endLine = position.end.line;
 			
 			// Check if this is a flashcard block
-			if (startLine < lines.length && lines[startLine].trim() === '```flashcard') {
-				// Extract content between the code block markers
-				let blockContent = '';
-				for (let i = startLine + 1; i < endLine && i < lines.length; i++) {
-					if (lines[i].trim() === '```') {
-						break; // End of code block
-					}
-					blockContent += lines[i] + '\n';
+			if (startLine >= lines.length || lines[startLine].trim() !== '```flashcard') {
+				continue;
+			}
+
+			// Extract content between the code block markers
+			let blockContent = '';
+			for (let i = startLine + 1; i < endLine && i < lines.length; i++) {
+				if (lines[i].trim() === '```') {
+					break; // End of code block
 				}
-				
-				if (blockContent.trim()) {
-					// Parse the flashcard with line range information
-					const flashcard = BlockFlashcardParser.parseFlashcard(
-						blockContent.trim(), 
-						file.path, 
-						startLine + 1, // 1-indexed for user display
-						endLine + 1,
-						this.vaultName,
-						this.availableNoteTypes
-					);
-					
-					// Validate flashcard if it parsed successfully
-					if (!('error' in flashcard)) {
-						const validationError = this.validateFlashcard(flashcard);
-						if (validationError) {
-							// Convert to invalid flashcard
-							const invalidFlashcard: InvalidFlashcard = {
-								sourcePath: flashcard.sourcePath,
-								lineStart: flashcard.lineStart,
-								lineEnd: flashcard.lineEnd,
-								error: validationError
-							};
-							flashcards.push(invalidFlashcard);
-						} else {
-							flashcards.push(flashcard);
-						}
-					} else {
-						flashcards.push(flashcard);
-					}
-				}
+				blockContent += lines[i] + '\n';
+			}
+			blockContent = blockContent.trim();
+			
+			// Parse the flashcard with line range information
+			const flashcard = BlockFlashcardParser.parseFlashcard(
+				blockContent, 
+				file.path, 
+				startLine + 1, // 1-indexed for user display
+				endLine + 1,
+				this.vaultName,
+				this.availableNoteTypes
+			);
+			
+			// No need to validate invalid flashcards
+			if ('error' in flashcard) {
+				flashcards.push(flashcard);
+				continue;
+			}
+
+			// Validate flashcard if it parsed successfully
+			const validationError = this.validateFlashcard(flashcard);
+			if (validationError) {
+				// Convert to invalid flashcard
+				const invalidFlashcard: InvalidFlashcard = {
+					sourcePath: flashcard.sourcePath,
+					lineStart: flashcard.lineStart,
+					lineEnd: flashcard.lineEnd,
+					error: validationError
+				};
+				flashcards.push(invalidFlashcard);
+			} else {
+				flashcards.push(flashcard);
 			}
 		}
 		
 		return flashcards;
 	}
 
-	private async fetchAnkiNoteData(ankiNoteIds: number[]): Promise<Map<number, AnkiNote>> {
-		const ankiNotesData = new Map<number, AnkiNote>();
-		
+	private async fetchAnkiNotes(ankiNoteIds: number[]): Promise<Map<number, AnkiNote>> {
+		const ankiNotes = new Map<number, AnkiNote>();
+
 		if (ankiNoteIds.length === 0) {
-			return ankiNotesData;
+			return ankiNotes;
 		}
 		
 		try {
 			// Fetch note info from Anki (batch operation for performance)
-			const notesInfo = await this.ankiService.getNotes(ankiNoteIds);
+			const notes = await this.ankiService.getNotes(ankiNoteIds);
 			
-			for (const noteInfo of notesInfo) {
-				if (noteInfo && noteInfo.noteId) {
-					ankiNotesData.set(noteInfo.noteId, noteInfo);
+			for (const note of notes) {
+				if (note && note.noteId) {
+					ankiNotes.set(note.noteId, note);
 				}
 			}
 			
-			console.log(`Fetched ${ankiNotesData.size} Anki notes for comparison`);
+			console.log(`Fetched ${ankiNotes.size} Anki notes for comparison`);
 		} catch (error) {
-			console.warn('Failed to fetch Anki note data:', error);
+			console.warn('Failed to fetch Anki note:', error);
 		}
 		
-		return ankiNotesData;
+		return ankiNotes;
 	}
 	
-	private compareFlashcardWithAnki(flashcard: Flashcard, ankiNoteData: AnkiNote): boolean {
+	private compareFlashcardWithAnki(flashcard: Flashcard, ankiNote: AnkiNote): boolean {
 		try {
 			// Convert flashcard to HTML version for comparison
-			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard);
+			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
 
 			// Check all Anki fields (so we catch missing fields in flashcard)
-			for (const [fieldName, ankiField] of Object.entries(ankiNoteData.htmlFields)) {
+			for (const [fieldName, ankiField] of Object.entries(ankiNote.htmlFields)) {
 				const flashcardHtml = htmlFlashcard.htmlFields[fieldName] || '';
 				const ankiHtml = ankiField?.value || '';
 				
@@ -308,9 +308,9 @@ export class SyncProgressModal extends Modal {
 				}
 			}
 			
-			// Compare tags as sets, ignoring obsidian-* tags, ignored tags, and order
-			const flashcardUserTags = new Set(this.ankiService.filterUserTags(flashcard.tags));
-			const ankiUserTags = new Set(this.ankiService.filterUserTags(ankiNoteData.tags || []));
+			// Compare tags as sets, ignoring order and ignored tags
+			const flashcardUserTags = new Set(this.ankiService.filterIgnoredTags(htmlFlashcard.tags));
+			const ankiUserTags = new Set(this.ankiService.filterIgnoredTags(ankiNote.tags || []));
 			
 			// Check if sets are equal (same tags, ignore order)
 			if (flashcardUserTags.size !== ankiUserTags.size) {
@@ -781,7 +781,7 @@ export class SyncConfirmationModal extends Modal {
 
 	private renderFlashcard(container: HTMLElement, flashcard: Flashcard) {
 		const flashcardContainer = container.createEl('div');
-		const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard);
+		const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
 		const renderer = new FlashcardRenderer(flashcardContainer, htmlFlashcard);
 		renderer.onload()
 	}
@@ -813,7 +813,7 @@ export class SyncConfirmationModal extends Modal {
 		const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote);
 		
 		// Convert Obsidian flashcard to HTML format
-		const obsidianAsHtmlFlashcard = MarkdownService.toHtmlFlashcard(obsidian);
+		const obsidianAsHtmlFlashcard = MarkdownService.toHtmlFlashcard(obsidian, this.vaultName);
 		
 		// Render both versions using the existing FlashcardRenderer
 		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsHtmlFlashcard);

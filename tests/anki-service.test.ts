@@ -41,7 +41,7 @@ describe('YankiConnectAnkiService', () => {
           Front: 'What is **2+2**?',
           Back: 'The answer is *4*',
         },
-        tags: ['math', 'basic'], // obsidian-* tags filtered out
+        tags: ['math', 'basic', 'obsidian-synced', 'obsidian-vault::test-vault', 'obsidian-file::notes/file.md'],
         ankiId: 12345,
       });
     });
@@ -79,24 +79,24 @@ describe('YankiConnectAnkiService', () => {
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
       expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
-      expect(result.tags).toEqual(['user-tag']); // Should filter out obsidian-* tags
     });
 
-    it('should filter out obsidian-* tags but keep user tags', () => {
+    it('should URL-decode the obsidian-file:: path', () => {
       const ankiNote = createMockAnkiNote({
+        htmlFields: {
+          Front: { value: 'Question', order: 0 },
+          Back: { value: 'Answer', order: 1 },
+        },
         tags: [
-          'user-tag-1',
+          'user-tag',
+          'obsidian-file::Notes/New%20Path.md',
           'obsidian-synced',
-          'custom-tag',
-          'obsidian-vault::my-vault',
-          'another-user-tag',
-          'obsidian-something-else',
         ],
       });
 
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
-      expect(result.tags).toEqual(['user-tag-1', 'custom-tag', 'another-user-tag']);
+      expect(result.sourcePath).toBe('Notes/New Path.md');
     });
 
     it('should handle empty or missing fields gracefully', () => {
@@ -196,7 +196,7 @@ describe('YankiConnectAnkiService', () => {
 
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
-      expect(result.tags).toEqual([]);
+      expect(result.tags).toEqual(['obsidian-synced', 'obsidian-vault::test']);
     });
 
     it('should preserve complex HTML structures in content fields', () => {
@@ -298,7 +298,7 @@ describe('YankiConnectAnkiService', () => {
         const serviceWithCustomIgnored = new YankiConnectAnkiService(['marked', 'leech', 'custom-ignored']);
         const result = serviceWithCustomIgnored.toHtmlFlashcard(ankiNote);
 
-        expect(result.tags).toEqual(['user-tag', 'another-user-tag']); // Should filter out obsidian-* and ignored tags
+        expect(result.tags).toEqual(['user-tag', 'obsidian-synced', 'another-user-tag']);
       });
     });
 
@@ -316,7 +316,7 @@ describe('YankiConnectAnkiService', () => {
 
         const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
-        expect(result.tags).toEqual(['user-tag', 'study-tag']); // Should exclude obsidian-* and ignored tags
+        expect(result.tags).toEqual(['user-tag', 'obsidian-synced', 'study-tag']);
       });
 
       it('should handle empty ignored tags array', () => {
@@ -333,7 +333,7 @@ describe('YankiConnectAnkiService', () => {
         const serviceWithNoIgnored = new YankiConnectAnkiService([]);
         const result = serviceWithNoIgnored.convertOrphanedNoteToFlashcard(ankiNote);
 
-        expect(result.tags).toEqual(['user-tag', 'marked', 'leech']); // Should only exclude obsidian-* tags
+        expect(result.tags).toEqual(['user-tag', 'marked', 'leech', 'obsidian-synced']);
       });
 
       it('should handle notes with no tags to ignore', () => {
@@ -347,7 +347,7 @@ describe('YankiConnectAnkiService', () => {
 
         const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
-        expect(result.tags).toEqual(['user-tag', 'study-tag']); // Should only exclude obsidian-* tags
+        expect(result.tags).toEqual(['user-tag', 'study-tag', 'obsidian-synced']);
       });
     });
 
@@ -362,18 +362,18 @@ describe('YankiConnectAnkiService', () => {
           'study-tag'
         ];
 
-        const result = service.filterUserTags(tags);
+        const result = service.filterIgnoredTags(tags);
 
-        expect(result).toEqual(['user-tag', 'study-tag']); // Should exclude obsidian-* and ignored tags
+        expect(result).toEqual(['user-tag', 'obsidian-synced', 'obsidian-vault::test', 'study-tag']);
       });
 
       it('should handle empty tags array', () => {
-        const result = service.filterUserTags([]);
+        const result = service.filterIgnoredTags([]);
         expect(result).toEqual([]);
       });
 
       it('should handle null/undefined tags', () => {
-        const result = service.filterUserTags(null as any);
+        const result = service.filterIgnoredTags(null as any);
         expect(result).toEqual([]);
       });
     });
@@ -383,14 +383,14 @@ describe('YankiConnectAnkiService', () => {
         const tags = ['user-tag', 'marked', 'leech', 'new-ignored-tag'];
 
         // Initial filtering with default ignored tags
-        const initialResult = service.filterUserTags(tags);
+        const initialResult = service.filterIgnoredTags(tags);
         expect(initialResult).toEqual(['user-tag', 'new-ignored-tag']);
 
         // Update ignored tags
         service.setIgnoredTags(['marked', 'leech', 'new-ignored-tag']);
 
         // Should now filter out the new ignored tag
-        const updatedResult = service.filterUserTags(tags);
+        const updatedResult = service.filterIgnoredTags(tags);
         expect(updatedResult).toEqual(['user-tag']);
       });
 
@@ -401,8 +401,8 @@ describe('YankiConnectAnkiService', () => {
         service.setIgnoredTags([]);
 
         // Should only filter obsidian-* tags
-        const result = service.filterUserTags(tags);
-        expect(result).toEqual(['user-tag', 'marked', 'leech']);
+        const result = service.filterIgnoredTags(tags);
+        expect(result).toEqual(['user-tag', 'marked', 'leech', 'obsidian-synced']);
       });
     });
   });

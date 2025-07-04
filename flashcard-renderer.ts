@@ -73,7 +73,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 }
 
 export class FlashcardCodeBlockProcessor {
-	static render(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
+	static render(vaultName: string, source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
 		// Parse flashcard with line positions - we don't have exact line positions here, so use 0
 		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, 0, 0);
 		
@@ -111,7 +111,7 @@ export class FlashcardCodeBlockProcessor {
 			code.className = 'language-yaml';
 		} else {
 			// Valid flashcard - convert to HTML and render it
-			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard);
+			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, vaultName);
 			const renderer = new FlashcardRenderer(el, htmlFlashcard);
 			ctx.addChild(renderer);
 		}

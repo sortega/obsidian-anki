@@ -1,6 +1,6 @@
 import { App, Modal, Notice, TFile, MarkdownView } from 'obsidian';
 import { AnkiService, AnkiNote } from './anki-service';
-import { Flashcard } from './flashcard';
+import { Flashcard, HtmlFlashcard } from './flashcard';
 import { SyncAnalysis } from './sync-analysis';
 import { MarkdownService } from './markdown-service';
 import { DEFAULT_IMPORT_FILE } from './constants';
@@ -117,8 +117,8 @@ export class SyncExecutionModal extends Modal {
 					this.updateProgress(completed / totalOperations, `Creating: ${flashcard.sourcePath}:${flashcard.lineStart}`);
 					
 					// Convert markdown fields to HTML
-					const htmlFlashcard = this.renderFlashcardToHtml(flashcard);
-					const noteId = await this.ankiService.createNote(htmlFlashcard, this.defaultDeck, this.vaultName);
+					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
+					const noteId = await this.ankiService.createNote(htmlFlashcard, this.defaultDeck);
 					createdNoteIds.push({ flashcard, noteId });
 					
 					// Track successful operation
@@ -152,8 +152,8 @@ export class SyncExecutionModal extends Modal {
 					this.updateProgress(completed / totalOperations, `Updating: ${flashcard.sourcePath}:${flashcard.lineStart}`);
 					
 					// Convert markdown fields to HTML
-					const htmlFlashcard = this.renderFlashcardToHtml(flashcard);
-					await this.ankiService.updateNote(ankiNote.noteId, htmlFlashcard, this.vaultName);
+					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
+					await this.ankiService.updateNote(ankiNote.noteId, htmlFlashcard);
 					
 					// Track successful operation
 					this.results.successfulOperations.push({
@@ -500,22 +500,6 @@ export class SyncExecutionModal extends Modal {
 			sortKeys: false // Preserve order
 		});
 	}
-
-	private renderFlashcardToHtml(flashcard: Flashcard): Flashcard {
-		const htmlContentFields: Record<string, string> = {};
-		
-		// Render each markdown field to HTML using MarkdownService
-		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
-			htmlContentFields[fieldName] = MarkdownService.renderToHtml(fieldValue);
-		}
-		
-		// Return a new flashcard with HTML content
-		return {
-			...flashcard,
-			contentFields: htmlContentFields
-		};
-	}
-
 
 	private updateProgress(progress: number, statusText: string) {
 		const percentage = Math.round(progress * 100);
