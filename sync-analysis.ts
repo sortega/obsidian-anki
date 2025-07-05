@@ -444,17 +444,32 @@ export class SyncConfirmationModal extends Modal {
 		// Action buttons
 		const buttonContainer = contentEl.createEl('div', { cls: 'sync-button-container' });
 		
-		const cancelButton = buttonContainer.createEl('button', { 
-			text: 'Cancel',
-			cls: 'mod-cta sync-button-cancel'
-		});
-		cancelButton.onclick = () => this.close();
+		// Check if there are any changes to apply
+		const hasChanges = this.analysis.newFlashcards.length > 0 || 
+			this.analysis.changedFlashcards.length > 0 || 
+			this.analysis.deletedAnkiNotes.length > 0;
 		
-		const applyButton = buttonContainer.createEl('button', { 
-			text: 'Apply Changes',
-			cls: 'mod-cta sync-button-apply'
-		});
-		applyButton.onclick = () => this.applyChanges();
+		if (hasChanges) {
+			// Show Cancel and Apply Changes buttons when there are changes
+			const cancelButton = buttonContainer.createEl('button', { 
+				text: 'Cancel',
+				cls: 'mod-cta sync-button-cancel'
+			});
+			cancelButton.onclick = () => this.close();
+			
+			const applyButton = buttonContainer.createEl('button', { 
+				text: 'Apply Changes',
+				cls: 'mod-cta sync-button-apply'
+			});
+			applyButton.onclick = () => this.applyChanges();
+		} else {
+			// Show only Close button when there are no changes
+			const closeButton = buttonContainer.createEl('button', { 
+				text: 'Close',
+				cls: 'mod-cta sync-button-close'
+			});
+			closeButton.onclick = () => this.close();
+		}
 
 		// Show message if no flashcards found
 		const totalFlashcards = this.analysis.newFlashcards.length + this.analysis.changedFlashcards.length + 
