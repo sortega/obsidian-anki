@@ -86,12 +86,60 @@ Click the sync button in the ribbon to synchronize your flashcards with Anki. Th
 
 ### Obsidian Backlinks
 
-The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead, it provides a way to link back to 
-your Obsidian notes:
-1. **Add special fields**: Include `ObsidianVault` and `ObsidianNote` fields in your Anki note types
-2. **Auto-population**: Fields are automatically filled during sync with vault name and file path
-3. **Create links**: Add `obsidian://open?vault={{ObsidianVault}}&file={{ObsidianNote}}` to your Anki card templates
-4. **Click to open**: Click the link in Anki to jump directly to the source note in Obsidian
+The plugin doesn't automatically create backlinks from Anki to Obsidian. However, you can modify you note
+templates to show backlinks.
+
+Add this to your card template (repeat for all card types of all notes you need backlinks on). You most
+likely want this in your back template.
+
+```html
+<div id="note-id" style="display: none;">
+	[<a href="#">📝 From Obsidian</a>]
+</div>
+
+<script>
+	(() => {
+	  const container = document.getElementById('note-id');
+	  if (!container) return;
+  
+	  const tags = '{{text:Tags}}'.split(' ');
+	  const vaultTag = tags.find(t => t.startsWith('obsidian-vault::'));
+	  const fileTag = tags.find(t => t.startsWith('obsidian-file::'));
+  
+	  if (!tags.includes('obsidian-synced') || !vaultTag) return;
+  
+	  const vault = vaultTag.slice(16); // Remove 'obsidian-vault::'
+	  const file = fileTag?.slice(15); // Remove 'obsidian-file::'
+  
+	  const link = container.querySelector('a');
+	  if (file) {
+		link.href = `obsidian://open?vault=${vault}&file=${file}`;
+		link.textContent = '📝 ' + decodeURI(file).replace(/\.md$/, '');
+	  } else {
+		link.href = `obsidian://open?vault=${vault}`;
+	  }
+  
+	  container.style.display = 'block';
+	})();
+</script>
+```
+
+Add to this to your note styles:
+
+```css
+#note-id {
+    font-size: 70%;
+    margin-top: 1ex;
+    text-align: right;
+    color: grey;
+}
+
+#note-id a {
+    color: grey;
+}
+```
+
+Of course, you can experiment with other styles and evolve this snippets to fit your use case.
 
 ## Configuration
 
