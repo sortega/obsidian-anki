@@ -1,25 +1,13 @@
 # Obsidian Anki Plugin Development Plan
 
-## Current State Analysis
-
-### Implemented Features
-- ✅ Basic plugin structure with ribbon icons
-- ✅ Anki connection via `yanki-connect` library through service layer
-- ✅ Status bar showing Anki connection status
-- ✅ Flashcard insertion modal with note type selection
-- ✅ Flashcard rendering in edit and reading mode
-- ✅ Settings tab with note type caching (AnkiNoteType[])
-- ✅ Periodic Anki connection checking (10s intervals)
-- ✅ Note type and deck retrieval from Anki with structured data types
-
 ## Feature Roadmap
 
 ### Basic functionality
 - Flashcard parsing warnings
   - Warning: unknown fields
   - Warning: invalid Anki template references
-- Register commands in Obsidian command palette
-- Hotkeys to insert flashcard and sync to anki
+- ✅ Register commands in Obsidian command palette
+- ✅ Hotkeys to insert flashcard and sync to anki
 
 ### Cloze flashcards special treatment
 - Validate cloze markers
@@ -55,7 +43,7 @@ Tags:
 
 ### Anki Integration Strategy
 - **Vault tags**: `obsidian-vault:vault-name` for vault identification and isolation
-- **Backlink fields**: `ObsidianVault` and `ObsidianNote` fields auto-populated during sync
+- **Backlinks**: implemented by adding a bit of JavaScript to Anki Note templates manually (by the user)
 - **Clean field-based approach**: File path stored as field data, not encoded in tags
 
 ### Settings Configuration

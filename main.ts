@@ -86,6 +86,38 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			FlashcardCodeBlockProcessor.render(this.app.vault.getName(), source, el, ctx);
 		});
 
+		// Register commands for command palette
+		this.addCommand({
+			id: 'sync-to-anki',
+			name: 'Sync to Anki',
+			hotkeys: [{ modifiers: ['Mod', 'Ctrl'], key: 'a' }],
+			callback: async () => {
+				await this.connectToAnki('Sync command');
+				if (this.availableDecks.length === 0) {
+					new Notice("Cannot connect to Anki");
+					return;
+				}
+				await this.startSyncProcess();
+			}
+		});
+
+		this.addCommand({
+			id: 'insert-flashcard',
+			name: 'Insert flashcard',
+			hotkeys: [{ modifiers: ['Mod', 'Ctrl'], key: 'f' }],
+			editorCallback: (editor, view) => {
+				const modalProps: FlashcardInsertModalProps = {
+					availableNoteTypes: this.settings.availableNoteTypes,
+					lastUsedNoteType: this.settings.lastUsedNoteType,
+					onNoteTypeSelected: async (noteType: string) => {
+						this.settings.lastUsedNoteType = noteType;
+						await this.saveSettings();
+					}
+				};
+				new FlashcardInsertModal(this.app, modalProps).open();
+			}
+		});
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObsidianAnkiSettingTab(this.app, this));
 	}

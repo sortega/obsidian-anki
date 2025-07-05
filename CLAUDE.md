@@ -8,6 +8,7 @@ This is an Obsidian plugin called "Obsidian Anki" that syncs Obsidian notes to A
 
 - Ribbon icon for manual sync to Anki (currently connects but doesn't sync)
 - Ribbon icon for inserting flashcards with note type selection
+- Command palette integration with hotkeys
 - Status bar indicator showing Anki connection status (🟢 connected / 🔴 disconnected)
 - Plugin settings tab for configuration and note type cache management
 - Real-time Anki connection monitoring (10-second intervals)
@@ -99,7 +100,6 @@ The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead
 
 ## Current Limitations & TODOs
 
-- No keyboard shortcuts defined
 - No cloze deletion syntax support
 - Missing media file synchronization
 

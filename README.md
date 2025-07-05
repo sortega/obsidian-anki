@@ -12,9 +12,9 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 - 🎯 **Note Type Selection**: Choose from available Anki note types
 - 🔄 **Full Sync**: Complete vault scanning and bidirectional sync with Anki
 - 🔗 **Obsidian Backlinks**: Automatic backlinks from Anki cards to Obsidian notes
+- ⌨️ **Command Palette & Hotkeys**: Access functions via command palette or hotkeys
 
 ### Coming Soon
-- ⌨️ **Keyboard Shortcuts**: Quick access to all plugin functions
 - 🧠 **Cloze Deletion**: Specialized syntax for cloze deletion cards
 - 🖼️ **Media Sync**: Automatic syncing of images and audio files
 
@@ -32,9 +32,23 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 
 ## Usage
 
+### Access Methods
+
+There are multiple ways to access the plugin's functionality:
+
+1. **Command Palette**: Press `Cmd/Ctrl+Shift+P` and search for:
+   - "Anki: Sync to Anki" 
+   - "Anki: Insert flashcard"
+
+2. **Hotkeys**: Use the default shortcuts (customizable in Settings → Hotkeys):
+   - `Cmd+Ctrl+A` - Sync to Anki
+   - `Cmd+Ctrl+F` - Insert flashcard
+
+3. **Ribbon Icons**: Click the icons in the left sidebar
+
 ### Creating Flashcards
 
-Use the flashcard insertion button in the ribbon or create flashcard blocks manually:
+Use any of the above methods to insert flashcard blocks, or create them manually:
 
 ```flashcard
 NoteType: Basic
