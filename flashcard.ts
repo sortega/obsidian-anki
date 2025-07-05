@@ -127,25 +127,7 @@ export class BlockFlashcardParser {
 				};
 			}
 
-			// Add backlink fields if they don't exist and the note type supports them
-			if (vaultName && availableNoteTypes) {
-				const noteTypeName = ('NoteType' in data && typeof data.NoteType === 'string') 
-					? data.NoteType 
-					: DEFAULT_NOTE_TYPE;
-				
-				const noteType = availableNoteTypes.find(nt => nt.name === noteTypeName);
-				if (noteType) {
-					// Add ObsidianVault field if missing and note type has it
-					if (noteType.fields.includes('ObsidianVault') && !('ObsidianVault' in contentFields)) {
-						contentFields['ObsidianVault'] = vaultName;
-					}
-					
-					// Add ObsidianNote field if missing and note type has it
-					if (noteType.fields.includes('ObsidianNote') && !('ObsidianNote' in contentFields)) {
-						contentFields['ObsidianNote'] = sourcePath;
-					}
-				}
-			}
+			// Remove special field handling - backlinks are now handled via tags
 
 			// Construct Flashcard with proper structure and mandatory defaults
 			const flashcard: Flashcard = {

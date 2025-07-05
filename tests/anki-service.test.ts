@@ -46,28 +46,25 @@ describe('YankiConnectAnkiService', () => {
       });
     });
 
-    it('should extract source path from ObsidianNote field when no file tag exists', () => {
+    it('should return empty sourcePath when no file tag exists', () => {
       const ankiNote = createMockAnkiNote({
         htmlFields: {
           Front: { value: 'Question', order: 0 },
           Back: { value: 'Answer', order: 1 },
-          ObsidianNote: { value: 'Notes/My Note.md', order: 2 },
         },
         tags: ['math', 'basic', 'obsidian-synced', 'obsidian-vault::test-vault'], // No file tag
       });
 
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
-      expect(result.sourcePath).toBe('Notes/My Note.md');
-      expect(result.contentFields).not.toHaveProperty('ObsidianNote');
+      expect(result.sourcePath).toBe('');
     });
 
-    it('should prioritize obsidian-file:: tag over ObsidianNote field for source path', () => {
+    it('should extract source path from obsidian-file:: tag', () => {
       const ankiNote = createMockAnkiNote({
         htmlFields: {
           Front: { value: 'Question', order: 0 },
           Back: { value: 'Answer', order: 1 },
-          ObsidianNote: { value: 'Notes/Old Path.md', order: 2 },
         },
         tags: [
           'user-tag',
@@ -78,7 +75,7 @@ describe('YankiConnectAnkiService', () => {
 
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
-      expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
+      expect(result.sourcePath).toBe('Notes/New Path.md');
     });
 
     it('should URL-decode the obsidian-file:: path', () => {
@@ -248,12 +245,11 @@ describe('YankiConnectAnkiService', () => {
     });
 
     describe('toHtmlFlashcard integration', () => {
-      it('should prioritize obsidian-file:: tag over ObsidianNote field', () => {
+      it('should extract source path from obsidian-file:: tag', () => {
         const ankiNote = createMockAnkiNote({
           htmlFields: {
             Front: { value: 'Question', order: 0 },
             Back: { value: 'Answer', order: 1 },
-            ObsidianNote: { value: 'Notes/Old Path.md', order: 2 },
           },
           tags: [
             'user-tag',
@@ -264,23 +260,22 @@ describe('YankiConnectAnkiService', () => {
 
         const result = service.toHtmlFlashcard(ankiNote);
 
-        expect(result.sourcePath).toBe('Notes/New Path.md'); // Should use file tag
+        expect(result.sourcePath).toBe('Notes/New Path.md');
         expect(result.noteType).toBe('Basic');
       });
 
-      it('should fallback to ObsidianNote field when no file tag exists', () => {
+      it('should return empty sourcePath when no file tag exists', () => {
         const ankiNote = createMockAnkiNote({
           htmlFields: {
             Front: { value: 'Question', order: 0 },
             Back: { value: 'Answer', order: 1 },
-            ObsidianNote: { value: 'Notes/My Note.md', order: 2 },
           },
           tags: ['user-tag', 'obsidian-synced'], // No file tag
         });
 
         const result = service.toHtmlFlashcard(ankiNote);
 
-        expect(result.sourcePath).toBe('Notes/My Note.md');
+        expect(result.sourcePath).toBe('');
       });
 
       it('should filter out ignored tags', () => {

@@ -178,18 +178,12 @@ export class YankiConnectAnkiService implements AnkiService {
 	}
 	
 	/**
-	 * Extract source path from AnkiNote with priority: obsidian-file:: tag > ObsidianNote field
+	 * Extract source path from AnkiNote using obsidian-file:: tag
 	 */
 	private extractSourcePath(ankiNote: AnkiNote): string {
-		// First, try to find obsidian-file:: tag (higher priority)
 		const fileTag = (ankiNote.tags || []).find(tag => tag.startsWith(OBSIDIAN_FILE_TAG_PREFIX));
 		if (fileTag) {
 			return decodeURI(fileTag.substring(OBSIDIAN_FILE_TAG_PREFIX.length));
-		}
-
-		// Fallback to ObsidianNote field
-		if (ankiNote.htmlFields['ObsidianNote']) {
-			return ankiNote.htmlFields['ObsidianNote'].value;
 		}
 
 		return '';
@@ -206,8 +200,6 @@ export class YankiConnectAnkiService implements AnkiService {
 		
 		// Add field content (convert HTML to markdown)
 		for (const [fieldName, fieldData] of Object.entries(ankiNote.htmlFields || {})) {
-			if (fieldName === 'ObsidianNote') continue; // Skip metadata field
-			
 			let fieldValue = fieldData.value || '';
 			
 			// Use turndown to convert HTML to markdown

@@ -95,12 +95,7 @@ The plugin includes comprehensive flashcard rendering with improved type safety:
 
 ### Obsidian Backlinks
 
-The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead, it provides a way to link back to
-your Obsidian notes:
-1. **Add special fields**: Include `ObsidianVault` and `ObsidianNote` fields in your Anki note types
-2. **Auto-population**: Fields are automatically filled during sync with vault name and file path
-3. **Create links**: Add `obsidian://open?vault={{ObsidianVault}}&file={{ObsidianNote}}` to your Anki card templates
-4. **Click to open**: Click the link in Anki to jump directly to the source note in Obsidian
+The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead, it adds special tags to synced cards that can be used to create links back to your Obsidian notes in Anki card templates.
 
 ## Current Limitations & TODOs
 
