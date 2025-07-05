@@ -5,9 +5,6 @@
 ### Basic functionality
 - Flashcard parsing warnings
   - Warning: unknown fields
-  - Warning: invalid Anki template references
-- ✅ Register commands in Obsidian command palette
-- ✅ Hotkeys to insert flashcard and sync to anki
 
 ### Cloze flashcards special treatment
 - Validate cloze markers
