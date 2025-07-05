@@ -32,10 +32,6 @@
 - Sync local images
 - Sync other media (low priority)
 
-### Other
-- Support for linking back to Obsidian notes
-- Import existing flashcards into an Obsidian note
-
 ## Technical Architecture Decisions
 
 ### Data Flow
