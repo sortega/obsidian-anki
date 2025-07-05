@@ -37,8 +37,12 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Content area
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
-		// Render all HTML fields
+		// Render non-empty HTML fields
 		for (const [fieldName, htmlContent] of Object.entries(this.htmlFlashcard.htmlFields)) {
+			if (!htmlContent.trim()) {
+				continue;
+			}
+
 			const fieldContainer = content.createEl('div', { cls: 'flashcard-field' });
 			
 			// Field label
