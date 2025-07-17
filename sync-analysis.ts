@@ -26,12 +26,14 @@ export class SyncProgressModal extends Modal {
 	private ankiService: AnkiService;
 	private vaultName: string;
 	private availableNoteTypes: NoteType[];
+	private settings: { defaultDeck: string };
 
-	constructor(app: App, ankiService: AnkiService, availableNoteTypes: NoteType[], onComplete: (analysis: SyncAnalysis) => void) {
+	constructor(app: App, ankiService: AnkiService, availableNoteTypes: NoteType[], settings: { defaultDeck: string }, onComplete: (analysis: SyncAnalysis) => void) {
 		super(app);
 		this.onComplete = onComplete;
 		this.ankiService = ankiService;
 		this.availableNoteTypes = availableNoteTypes;
+		this.settings = settings;
 		this.vaultName = app.vault.getName();
 		this.analysis = {
 			totalFiles: 0,
@@ -234,6 +236,7 @@ export class SyncProgressModal extends Modal {
 				file.path, 
 				startLine + 1, // 1-indexed for user display
 				endLine + 1,
+				this.settings.defaultDeck,
 				this.availableNoteTypes
 			);
 			
@@ -331,7 +334,16 @@ export class SyncProgressModal extends Modal {
 				}
 			}
 			
-			// If we reach here, all fields and tags match
+			// Compare deck names
+			if (ankiNote.deckNames.length > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
+				console.log('Deck mismatch:', {
+					obsidian: htmlFlashcard.deck,
+					anki: ankiNote.deckNames
+				});
+				return false;
+			}
+			
+			// If we reach here, all fields, tags, and deck match
 			return true;
 			
 		} catch (error) {
@@ -721,7 +733,7 @@ export class SyncConfirmationModal extends Modal {
 			
 			// Render the deleted flashcard using FlashcardRenderer directly
 			const flashcardContainer = item.createEl('div');
-			const renderer = new FlashcardRenderer(flashcardContainer, ankiAsHtmlFlashcard);
+			const renderer = new FlashcardRenderer(flashcardContainer, ankiAsHtmlFlashcard, this.settings.defaultDeck);
 			renderer.onload();
 		}
 		
@@ -796,7 +808,7 @@ export class SyncConfirmationModal extends Modal {
 	private renderFlashcard(container: HTMLElement, flashcard: Flashcard) {
 		const flashcardContainer = container.createEl('div');
 		const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
-		const renderer = new FlashcardRenderer(flashcardContainer, htmlFlashcard);
+		const renderer = new FlashcardRenderer(flashcardContainer, htmlFlashcard, this.settings.defaultDeck);
 		renderer.onload()
 	}
 
@@ -830,10 +842,10 @@ export class SyncConfirmationModal extends Modal {
 		const obsidianAsHtmlFlashcard = MarkdownService.toHtmlFlashcard(obsidian, this.vaultName);
 		
 		// Render both versions using the existing FlashcardRenderer
-		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsHtmlFlashcard);
+		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsHtmlFlashcard, this.settings.defaultDeck);
 		ankiRenderer.onload();
 		
-		const obsidianRenderer = new FlashcardRenderer(obsidianContainer, obsidianAsHtmlFlashcard);
+		const obsidianRenderer = new FlashcardRenderer(obsidianContainer, obsidianAsHtmlFlashcard, this.settings.defaultDeck);
 		obsidianRenderer.onload();
 	}
 }

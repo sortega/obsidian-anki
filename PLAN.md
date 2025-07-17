@@ -2,7 +2,11 @@
 
 ## Feature Roadmap
 
-### Basic functionality
+### Note metadata
+Use note properties (from the front-matter) to influence all the flashcards in that file:
+
+- Anki-Deck: override the default deck
+- Anki-Tags: all these tags are added
 
 ### Cloze flashcards special treatment
 - Validate cloze markers
@@ -11,9 +15,12 @@
 - Render as highlighted text when cursor is elsewhere
 
 ### Syncing
-- Include the deck in when comparing flashcards
 - Sync local images
 - Sync other media (low priority)
+
+### Import flashcard
+- Button, palette action and shortcut to import a flashcard
+- Modal to search for the card and preview what would be inserted
 
 ## Technical Architecture Decisions
 

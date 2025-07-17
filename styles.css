@@ -100,6 +100,15 @@ If your plugin does not need CSS, delete this file.
     padding-top: 8px;
     border-top: 1px solid var(--background-modifier-border);
     font-size: var(--font-ui-small);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.flashcard-tags-container {
+    display: flex;
+    align-items: center;
+    flex: 1;
 }
 
 .flashcard-tags-label {
@@ -110,6 +119,27 @@ If your plugin does not need CSS, delete this file.
 .flashcard-tags-content {
     color: var(--text-normal);
     font-style: italic;
+}
+
+.flashcard-deck-container {
+    display: flex;
+    align-items: center;
+    margin-left: 12px;
+}
+
+.flashcard-deck-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.flashcard-deck-content {
+    color: var(--text-normal);
+    font-weight: 500;
+    background: var(--background-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    margin-left: 4px;
 }
 
 /* Warning flashcard styles */

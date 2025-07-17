@@ -83,7 +83,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 		// Register flashcard code block processor
 		this.registerMarkdownCodeBlockProcessor('flashcard', (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
-			FlashcardCodeBlockProcessor.render(this.app.vault.getName(), source, el, ctx, this.settings.availableNoteTypes);
+			FlashcardCodeBlockProcessor.render(this.app.vault.getName(), source, el, ctx, this.settings.defaultDeck, this.settings.availableNoteTypes);
 		});
 
 		// Register commands for command palette
@@ -192,7 +192,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	private async startSyncProcess() {
 		try {
 			// Show progress modal and start scanning
-			const progressModal = new SyncProgressModal(this.app, this.ankiService, this.settings.availableNoteTypes, (analysis: SyncAnalysis) => {
+			const progressModal = new SyncProgressModal(this.app, this.ankiService, this.settings.availableNoteTypes, { defaultDeck: this.settings.defaultDeck }, (analysis: SyncAnalysis) => {
 				// When scanning is complete, show confirmation modal
 				new SyncConfirmationModal(this.app, analysis, this.ankiService, this.settings).open();
 			});

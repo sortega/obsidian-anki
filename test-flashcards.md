@@ -106,3 +106,34 @@ NoteType: Basic
 Front: My **front**
 Unknown: My *unknown field*
 ```
+
+## Cards with custom decks
+
+```flashcard
+NoteType: Basic
+Deck: Math
+Front: What is 2+2?
+Back: 4
+Tags:
+  - arithmetic
+```
+
+```flashcard
+NoteType: Basic
+Deck: Science::Biology
+Front: What is the powerhouse of the cell?
+Back: Mitochondria
+Tags:
+  - biology
+  - cellular
+```
+
+```flashcard
+NoteType: Basic
+Deck: Languages::Spanish
+Front: How do you say "hello" in Spanish?
+Back: Hola
+Tags:
+  - spanish
+  - greetings
+```

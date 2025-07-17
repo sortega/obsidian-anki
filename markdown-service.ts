@@ -54,7 +54,8 @@ export class MarkdownService {
 			ankiId: flashcard.ankiId,
 			tags,
 			htmlFields,
-			warnings: flashcard.warnings
+			warnings: flashcard.warnings,
+			deck: flashcard.deck
 		};
 		
 		return htmlFlashcard;

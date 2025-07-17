@@ -52,6 +52,7 @@ Use any of the above methods to insert flashcard blocks, or create them manually
 
 ```flashcard
 NoteType: Basic
+Deck: Geography
 Front: What is the capital of France?
 Back: Paris
 Tags:
@@ -60,6 +61,24 @@ Tags:
 ```
 
 **Important**: Tags must be formatted as a YAML list using the dash syntax shown above. String formats like `Tags: "geography, europe"` are not supported.
+
+### Deck Management
+
+Flashcards can be assigned to specific Anki decks:
+
+```flashcard
+NoteType: Basic
+Deck: Math::Algebra
+Front: What is x if 2x + 3 = 7?
+Back: x = 2
+Tags:
+  - algebra
+```
+
+- **Deck field**: Optional field that specifies which Anki deck the card should be placed in
+- **Hierarchical decks**: Supports nested decks using `::` notation (e.g., `Math::Algebra::Linear`)
+- **Default deck**: Cards without a Deck field use the default deck from plugin settings
+- **Automatic moves**: Cards are automatically moved to the correct deck during sync
 
 ### Advanced Flashcard Formatting
 

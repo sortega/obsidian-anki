@@ -9,7 +9,7 @@ export const OBSIDIAN_VAULT_TAG_PREFIX = 'obsidian-vault::';
 export const OBSIDIAN_FILE_TAG_PREFIX = 'obsidian-file::';
 
 // Metadata fields for flashcard parsing
-export const METADATA_FIELDS = ['NoteType', 'AnkiId', 'Tags'];
+export const METADATA_FIELDS = ['AnkiId', 'Deck', 'NoteType', 'Tags'];
 
 // Import settings
 export const DEFAULT_IMPORT_FILE = 'Imported Flashcards.md';

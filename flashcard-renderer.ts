@@ -4,10 +4,12 @@ import { MarkdownService } from './markdown-service';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private htmlFlashcard: HtmlFlashcard;
+	private defaultDeck: string;
 
-	constructor(containerEl: HTMLElement, htmlFlashcard: HtmlFlashcard) {
+	constructor(containerEl: HTMLElement, htmlFlashcard: HtmlFlashcard, defaultDeck: string) {
 		super(containerEl);
 		this.htmlFlashcard = htmlFlashcard;
+		this.defaultDeck = defaultDeck;
 	}
 
 	onload() {
@@ -81,18 +83,36 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			fieldContentEl.innerHTML = htmlContent;
 		}
 
-		// Footer with tags if present (filter out obsidian-* internal tags)
+		// Footer with tags and deck
 		const visibleTags = this.htmlFlashcard.tags.filter((tag: string) => !tag.startsWith('obsidian-'));
-		if (visibleTags.length > 0) {
+		if (visibleTags.length > 0 || this.htmlFlashcard.deck !== this.defaultDeck) {
 			const footer = containerEl.createEl('div', { cls: 'flashcard-footer' });
-			const tagsLabel = footer.createEl('span', { 
-				text: 'Tags: ',
-				cls: 'flashcard-tags-label'
-			});
-			const tagsContent = footer.createEl('span', { 
-				text: visibleTags.join(', '),
-				cls: 'flashcard-tags-content'
-			});
+			
+			// Left side: tags
+			const tagsContainer = footer.createEl('div', { cls: 'flashcard-tags-container' });
+			if (visibleTags.length > 0) {
+				const tagsLabel = tagsContainer.createEl('span', { 
+					text: 'Tags: ',
+					cls: 'flashcard-tags-label'
+				});
+				const tagsContent = tagsContainer.createEl('span', { 
+					text: visibleTags.join(', '),
+					cls: 'flashcard-tags-content'
+				});
+			}
+			
+			// Right side: deck
+			if (this.htmlFlashcard.deck !== this.defaultDeck) {
+				const deckContainer = footer.createEl('div', { cls: 'flashcard-deck-container' });
+				const deckLabel = deckContainer.createEl('span', { 
+					text: 'Deck: ',
+					cls: 'flashcard-deck-label'
+				});
+				const deckContent = deckContainer.createEl('span', { 
+					text: this.htmlFlashcard.deck,
+					cls: 'flashcard-deck-content'
+				});
+			}
 		}
 	}
 
@@ -165,10 +185,11 @@ export class FlashcardCodeBlockProcessor {
 		source: string,
 		el: HTMLElement,
 		ctx: MarkdownPostProcessorContext,
+		defaultDeck: string,
 		availableNoteTypes?: NoteType[]
 	) {
 		// Parse flashcard with line positions - we don't have exact line positions here, so use 0
-		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, 0, 0, availableNoteTypes);
+		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, 0, 0, defaultDeck, availableNoteTypes);
 		
 		if ('error' in flashcard) {
 			// If parsing fails, show error UI with original code block
@@ -201,7 +222,7 @@ export class FlashcardCodeBlockProcessor {
 		} else {
 			// Valid flashcard - convert to HTML and render it
 			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, vaultName);
-			const renderer = new FlashcardRenderer(el, htmlFlashcard);
+			const renderer = new FlashcardRenderer(el, htmlFlashcard, defaultDeck);
 			ctx.addChild(renderer);
 		}
 	}

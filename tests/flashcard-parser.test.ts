@@ -1,5 +1,5 @@
 import { BlockFlashcardParser, Flashcard, InvalidFlashcard, NoteType } from '../flashcard';
-import { DEFAULT_NOTE_TYPE } from '../constants';
+import { DEFAULT_DECK, DEFAULT_NOTE_TYPE } from '../constants';
 
 describe('BlockFlashcardParser', () => {
 	const mockNoteTypes: NoteType[] = [
@@ -17,10 +17,11 @@ Tags:
   - math
   - basic`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 10);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 10, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
+				expect(result.deck).toBe(DEFAULT_DECK);
 				expect(result.noteType).toBe('Basic');
 				expect(result.contentFields).toEqual({
 					Front: 'What is 2+2?',
@@ -38,10 +39,11 @@ Tags:
 			const source = `Front: Question
 Back: Answer`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
+				expect(result.deck).toBe(DEFAULT_DECK);
 				expect(result.noteType).toBe(DEFAULT_NOTE_TYPE);
 				expect(result.contentFields).toEqual({
 					Front: 'Question',
@@ -57,7 +59,7 @@ Back: Answer`;
 Front: Question
 Back: Answer`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -72,7 +74,7 @@ AnkiId: 1234567890
 Front: Question
 Back: Answer`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -86,7 +88,7 @@ AnkiId: "1234567890"
 Front: Question
 Back: Answer`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -103,7 +105,7 @@ Back: |
   This is a multiline
   back field`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 8);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 8, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -117,7 +119,7 @@ Back: |
 Front: Question
 Back: Answer`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, mockNoteTypes);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK, mockNoteTypes);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -133,7 +135,7 @@ Front: Question
 Back: Answer
 InvalidField: Some content`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 6, mockNoteTypes);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 6, DEFAULT_DECK, mockNoteTypes);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -150,7 +152,7 @@ Back: Answer
 InvalidField1: Content1
 InvalidField2: Content2`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 7, mockNoteTypes);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 7, DEFAULT_DECK, mockNoteTypes);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -168,7 +170,7 @@ Front: Question
 Back: Answer
 InvalidField: Content`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 6);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 6, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -177,7 +179,7 @@ InvalidField: Content`;
 		});
 
 		it('should return error for empty content', () => {
-			const result = BlockFlashcardParser.parseFlashcard('', 'test.md', 1, 1);
+			const result = BlockFlashcardParser.parseFlashcard('', 'test.md', 1, 1, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -186,7 +188,7 @@ InvalidField: Content`;
 		});
 
 		it('should return error for whitespace-only content', () => {
-			const result = BlockFlashcardParser.parseFlashcard('   \n  \n  ', 'test.md', 1, 3);
+			const result = BlockFlashcardParser.parseFlashcard('   \n  \n  ', 'test.md', 1, 3, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -200,7 +202,7 @@ Front: Question
 Back: Answer
 [invalid yaml`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -212,7 +214,7 @@ Back: Answer
 			const source = `- item1
 - item2`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 3);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 3, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -226,7 +228,7 @@ Front: Question
 Back: Answer
 Tags: "tag1, tag2"`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -243,7 +245,7 @@ Tags:
   - ""
   - tag2`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 8);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 8, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -256,7 +258,7 @@ Tags:
 Tags:
   - tag1`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 4);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 4, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -270,7 +272,7 @@ AnkiId: invalid
 Front: Question
 Back: Answer`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -284,7 +286,7 @@ AnkiId: -123
 Front: Question
 Back: Answer`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
@@ -301,7 +303,7 @@ Tags:
   - books
   - science-fiction`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 8, mockNoteTypes);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 8, DEFAULT_DECK, mockNoteTypes);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -321,7 +323,7 @@ Tags:
 Front: 123
 Back: true`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 4);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 4, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -337,7 +339,7 @@ Back: true`;
 Front: Question
 Back: null`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 4);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 4, DEFAULT_DECK);
 
 			expect('error' in result).toBe(false);
 			if (!('error' in result)) {
@@ -355,12 +357,83 @@ Back:
   - item1
   - item2`;
 
-			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 6);
+			const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 6, DEFAULT_DECK);
 
 			expect('error' in result).toBe(true);
 			if ('error' in result) {
 				expect(result.error).toContain('Field \'Back\' must be a string, number, boolean, or null');
 			}
+		});
+		
+		describe('Deck field parsing', () => {
+			it('should use default deck when no Deck field is provided', () => {
+				const source = `NoteType: Basic
+Front: Question
+Back: Answer`;
+				
+				const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 4, DEFAULT_DECK);
+				
+				expect('error' in result).toBe(false);
+				if (!('error' in result)) {
+					expect(result.deck).toBe(DEFAULT_DECK);
+				}
+			});
+			
+			it('should use specified deck when Deck field is provided', () => {
+				const source = `NoteType: Basic
+Deck: Math::Algebra
+Front: Question
+Back: Answer`;
+				
+				const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
+				
+				expect('error' in result).toBe(false);
+				if (!('error' in result)) {
+					expect(result.deck).toBe('Math::Algebra');
+				}
+			});
+			
+			it('should trim whitespace from deck field', () => {
+				const source = `NoteType: Basic
+Deck: "  Science::Biology  "
+Front: Question
+Back: Answer`;
+				
+				const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
+				
+				expect('error' in result).toBe(false);
+				if (!('error' in result)) {
+					expect(result.deck).toBe('Science::Biology');
+				}
+			});
+			
+			it('should use default deck when Deck field is empty', () => {
+				const source = `NoteType: Basic
+Deck: ""
+Front: Question
+Back: Answer`;
+				
+				const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
+				
+				expect('error' in result).toBe(false);
+				if (!('error' in result)) {
+					expect(result.deck).toBe(DEFAULT_DECK);
+				}
+			});
+			
+			it('should use default deck when Deck field is only whitespace', () => {
+				const source = `NoteType: Basic
+Deck: "   "
+Front: Question
+Back: Answer`;
+				
+				const result = BlockFlashcardParser.parseFlashcard(source, 'test.md', 1, 5, DEFAULT_DECK);
+				
+				expect('error' in result).toBe(false);
+				if (!('error' in result)) {
+					expect(result.deck).toBe(DEFAULT_DECK);
+				}
+			});
 		});
 	});
 });

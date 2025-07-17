@@ -53,6 +53,7 @@ The plugin uses YAML-formatted code blocks for flashcards:
 
 ```flashcard
 NoteType: Basic
+Deck: Math::Algebra
 Front: Question content
 Back: Answer content
 Tags:
@@ -61,6 +62,17 @@ Tags:
 ```
 
 **Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `Tags: "topic1, topic2"` are not supported and will cause parsing errors.
+
+## Deck Management
+
+The plugin supports comprehensive deck management:
+
+- **Deck Field**: Optional `Deck` field specifies target Anki deck
+- **Hierarchical Support**: Nested decks using `::` notation (e.g., `Languages::Spanish::Verbs`)
+- **Default Fallback**: Cards without Deck field use plugin's default deck setting
+- **Automatic Movement**: Cards are moved to correct deck during sync without losing review history
+- **Visual Feedback**: Deck name displayed in flashcard UI when different from default
+- **Multi-deck Notes**: Handles notes with cards in different decks during sync
 
 ## Settings Interface
 

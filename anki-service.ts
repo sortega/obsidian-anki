@@ -21,6 +21,7 @@ export interface AnkiNote {
 	tags: string[];
 	modelName: string;
 	cards: number[];
+	deckNames: Set<string>;  // Multi-card notes might have cards in different decks
 }
 
 
@@ -49,7 +50,7 @@ export interface AnkiService {
 	/**
 	 * Create a new note in Anki from a flashcard
 	 */
-	createNote(flashcard: HtmlFlashcard, deckName: string): Promise<number>;
+	createNote(flashcard: HtmlFlashcard): Promise<number>;
 	
 	/**
 	 * Update an existing note in Anki with new flashcard data
@@ -60,6 +61,11 @@ export interface AnkiService {
 	 * Delete notes from Anki by their IDs
 	 */
 	deleteNotes(noteIds: number[]): Promise<void>;
+	
+	/**
+	 * Move cards to a different deck
+	 */
+	moveCard(ankiId: number, deckName: string): Promise<void>;
 	
 	/**
 	 * Convert an orphaned AnkiNote to a Flashcard with markdown content
@@ -128,22 +134,41 @@ export class YankiConnectAnkiService implements AnkiService {
 		
 		const notes = await this.yankiConnect.note.notesInfo({ notes: noteIds });
 		
+		// Get deck information for all cards
+		const allCardIds = notes.filter(note => note && note.cards)
+			.flatMap(note => note.cards || []);
+		
+		let cardDecks: Record<number, string> = {};
+		if (allCardIds.length > 0) {
+			const cardsInfo = await this.yankiConnect.card.cardsInfo({ cards: allCardIds });
+			cardsInfo.forEach((card: any) => {
+				if (card && card.cardId && card.deckName) {
+					cardDecks[card.cardId] = card.deckName;
+				}
+			});
+		}
+		
 		// Convert notes from yanki-connect format to our AnkiNote format
 		return notes.filter(note => 
 			note !== null && note !== undefined && note.noteId !== undefined
-		).map(note => ({
-			noteId: note.noteId,
-			htmlFields: note.fields || {},
-			tags: this.filterIgnoredTags(note.tags || []),
-			modelName: note.modelName,
-			cards: note.cards || []
-		}));
+		).map(note => {
+			const firstCardId = note.cards && note.cards[0];
+			const deckNames = new Set((note.cards ?? []).map(cardId => cardDecks[cardId]));
+			return {
+				noteId: note.noteId,
+				htmlFields: note.fields || {},
+				tags: this.filterIgnoredTags(note.tags || []),
+				modelName: note.modelName,
+				cards: note.cards || [],
+				deckNames: deckNames
+			};
+		});
 	}
 	
-	async createNote(flashcard: HtmlFlashcard, deckName: string): Promise<number> {
+	async createNote(flashcard: HtmlFlashcard): Promise<number> {
 		const noteId = await this.yankiConnect.note.addNote({
 			note: {
-				deckName: deckName,
+				deckName: flashcard.deck,
 				modelName: flashcard.noteType,
 				fields: flashcard.htmlFields,
 				tags: flashcard.tags
@@ -174,6 +199,22 @@ export class YankiConnectAnkiService implements AnkiService {
 		
 		await this.yankiConnect.note.deleteNotes({
 			notes: noteIds
+		});
+	}
+	
+	async moveCard(ankiId: number, deckName: string): Promise<void> {
+		// Get all cards for this note
+		const noteInfo = await this.yankiConnect.note.notesInfo({ notes: [ankiId] });
+		if (!noteInfo || noteInfo.length === 0 || !noteInfo[0].cards) {
+			throw new Error(`Cannot find cards for note ${ankiId}`);
+		}
+		
+		const cardIds = noteInfo[0].cards;
+		
+		// Move all cards to the target deck
+		await this.yankiConnect.deck.changeDeck({
+			cards: cardIds,
+			deck: deckName
 		});
 	}
 	
@@ -223,7 +264,9 @@ export class YankiConnectAnkiService implements AnkiService {
 			contentFields: contentFields,
 			tags: this.filterIgnoredTags(ankiNote.tags),
 			ankiId: ankiNote.noteId,
-			warnings: [] // Orphaned notes don't have parsing warnings
+			warnings: [], // Orphaned notes don't have parsing warnings
+			// Pick the deck of one of the cards when importing. After two syncs it will be normalized.
+			deck: ankiNote.deckNames[Symbol.iterator]().next().value
 		};
 	}
 
@@ -244,7 +287,9 @@ export class YankiConnectAnkiService implements AnkiService {
 			htmlFields: htmlFields,
 			tags: this.filterIgnoredTags(ankiNote.tags),
 			ankiId: ankiNote.noteId,
-			warnings: [] // Anki notes don't have parsing warnings
+			warnings: [], // Anki notes don't have parsing warnings
+			// Display all the deck names, this will be ironed out by the next sync
+			deck: Array.from(ankiNote.deckNames).join(',')
 		};
 	}
 	

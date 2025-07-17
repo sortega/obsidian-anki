@@ -118,7 +118,7 @@ export class SyncExecutionModal extends Modal {
 					
 					// Convert markdown fields to HTML
 					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
-					const noteId = await this.ankiService.createNote(htmlFlashcard, this.defaultDeck);
+					const noteId = await this.ankiService.createNote(htmlFlashcard);
 					createdNoteIds.push({ flashcard, noteId });
 					
 					// Track successful operation
@@ -153,7 +153,15 @@ export class SyncExecutionModal extends Modal {
 					
 					// Convert markdown fields to HTML
 					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
+					
+					// Update note content
 					await this.ankiService.updateNote(ankiNote.noteId, htmlFlashcard);
+					
+					// Check if deck has changed and move card if needed
+					if (ankiNote.deckNames.length > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
+						await this.ankiService.moveCard(ankiNote.noteId, htmlFlashcard.deck);
+						console.log(`📦 Moved card ${ankiNote.noteId} from '${ankiNote.deckNames}' to '${htmlFlashcard.deck}'`);
+					}
 					
 					// Track successful operation
 					this.results.successfulOperations.push({
@@ -242,7 +250,8 @@ export class SyncExecutionModal extends Modal {
 					tags: deletedNote.tags || [],
 					contentFields: {},
 					ankiId: deletedNote.noteId,
-					warnings: []
+					warnings: [],
+					deck: deletedNote.deckNames[Symbol.iterator]().next().value
 				};
 				
 				this.results.successfulOperations.push({
@@ -266,7 +275,8 @@ export class SyncExecutionModal extends Modal {
 					tags: deletedNote.tags || [],
 					contentFields: {},
 					ankiId: deletedNote.noteId,
-					warnings: []
+					warnings: [],
+					deck: deletedNote.deckNames[Symbol.iterator]().next().value
 				};
 				
 				this.results.failedOperations.push({
@@ -299,7 +309,8 @@ export class SyncExecutionModal extends Modal {
 					tags: orphanedNote.tags || [],
 					contentFields: {},
 					ankiId: orphanedNote.noteId,
-					warnings: []
+					warnings: [],
+					deck: orphanedNote.deckNames[Symbol.iterator]().next().value
 				};
 				
 				this.results.successfulOperations.push({
@@ -319,7 +330,8 @@ export class SyncExecutionModal extends Modal {
 					tags: orphanedNote.tags || [],
 					contentFields: {},
 					ankiId: orphanedNote.noteId,
-					warnings: []
+					warnings: [],
+					deck: orphanedNote.deckNames[Symbol.iterator]().next().value
 				};
 				
 				this.results.failedOperations.push({

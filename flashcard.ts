@@ -1,5 +1,5 @@
 import * as yaml from 'js-yaml';
-import { DEFAULT_NOTE_TYPE, METADATA_FIELDS } from './constants';
+import { DEFAULT_NOTE_TYPE, DEFAULT_DECK, METADATA_FIELDS } from './constants';
 
 // Note type definition for flashcard templates
 export interface NoteType {
@@ -21,6 +21,7 @@ export interface Flashcard extends FlashcardBlock {
 	tags: string[];
 	contentFields: Record<string, string>; // markdown content
 	warnings: string[]; // Problems not so serious as making the flashcard invalid
+	deck: string;
 }
 
 // HTML flashcard with rendered content and metadata tags (for display/comparison)
@@ -30,6 +31,7 @@ export interface HtmlFlashcard extends FlashcardBlock {
 	tags: string[];
 	htmlFields: Record<string, string>;
 	warnings: string[];
+	deck: string;
 }
 
 // Invalid flashcard with parsing error
@@ -43,7 +45,7 @@ export class BlockFlashcardParser {
 		return typeof data === 'object' && data !== null && !Array.isArray(data);
 	}
 
-	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
+	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, defaultDeck: string, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
 		function invalidFlashcard(error: string): InvalidFlashcard {
 			return { sourcePath, lineStart, lineEnd, error };
 		}
@@ -143,7 +145,10 @@ export class BlockFlashcardParser {
 					? data.Tags as string[] 
 					: [],
 				contentFields: contentFields,
-				warnings: []
+				warnings: [],
+				deck: ('Deck' in data && typeof data.Deck === 'string' && data.Deck.trim().length > 0) 
+					? data.Deck.trim() 
+					: defaultDeck
 			};
 			
 			// Check for warnings if availableNoteTypes is provided
