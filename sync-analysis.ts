@@ -234,7 +234,6 @@ export class SyncProgressModal extends Modal {
 				file.path, 
 				startLine + 1, // 1-indexed for user display
 				endLine + 1,
-				this.vaultName,
 				this.availableNoteTypes
 			);
 			

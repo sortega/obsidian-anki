@@ -222,7 +222,8 @@ export class YankiConnectAnkiService implements AnkiService {
 			noteType: ankiNote.modelName,
 			contentFields: contentFields,
 			tags: this.filterIgnoredTags(ankiNote.tags),
-			ankiId: ankiNote.noteId
+			ankiId: ankiNote.noteId,
+			warnings: [] // Orphaned notes don't have parsing warnings
 		};
 	}
 
@@ -242,7 +243,8 @@ export class YankiConnectAnkiService implements AnkiService {
 			noteType: ankiNote.modelName,
 			htmlFields: htmlFields,
 			tags: this.filterIgnoredTags(ankiNote.tags),
-			ankiId: ankiNote.noteId
+			ankiId: ankiNote.noteId,
+			warnings: [] // Anki notes don't have parsing warnings
 		};
 	}
 	

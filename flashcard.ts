@@ -20,6 +20,7 @@ export interface Flashcard extends FlashcardBlock {
 	ankiId?: number;  // Missing for new, yet to be synced cards
 	tags: string[];
 	contentFields: Record<string, string>; // markdown content
+	warnings: string[]; // Problems not so serious as making the flashcard invalid
 }
 
 // HTML flashcard with rendered content and metadata tags (for display/comparison)
@@ -27,7 +28,8 @@ export interface HtmlFlashcard extends FlashcardBlock {
 	noteType: string;
 	ankiId?: number;
 	tags: string[];
-	htmlFields: Record<string, string>; // HTML content
+	htmlFields: Record<string, string>;
+	warnings: string[];
 }
 
 // Invalid flashcard with parsing error
@@ -41,7 +43,7 @@ export class BlockFlashcardParser {
 		return typeof data === 'object' && data !== null && !Array.isArray(data);
 	}
 
-	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, vaultName?: string, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
+	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
 		function invalidFlashcard(error: string): InvalidFlashcard {
 			return { sourcePath, lineStart, lineEnd, error };
 		}
@@ -140,14 +142,41 @@ export class BlockFlashcardParser {
 				tags: ('Tags' in data && Array.isArray(data.Tags)) 
 					? data.Tags as string[] 
 					: [],
-				contentFields: contentFields
+				contentFields: contentFields,
+				warnings: []
 			};
+			
+			// Check for warnings if availableNoteTypes is provided
+			if (availableNoteTypes) {
+				// Check for unknown note type
+				const noteType = availableNoteTypes.find(nt => nt.name === flashcard.noteType);
+				if (!noteType) {
+					flashcard.warnings.push(`Unknown note type: '${flashcard.noteType}'. Available note types: ${availableNoteTypes.map(nt => nt.name).join(', ')}`);
+				} else {
+					// Check for unknown fields
+					const availableFields = noteType.fields;
+					const flashcardFields = Object.keys(flashcard.contentFields);
+					const unknownFields = flashcardFields.filter(fieldName => !availableFields.includes(fieldName));
+					
+					if (unknownFields.length > 0) {
+						if (unknownFields.length === 1) {
+							flashcard.warnings.push(`Unknown field '${unknownFields[0]}' for note type '${flashcard.noteType}'. Available fields: ${availableFields.join(', ')}`);
+						} else {
+							flashcard.warnings.push(`Unknown fields '${unknownFields.join("', '")}' for note type '${flashcard.noteType}'. Available fields: ${availableFields.join(', ')}`);
+						}
+					}
+				}
+			}
 			
 			// Add optional metadata fields
 			if ('AnkiId' in data && data.AnkiId !== undefined && data.AnkiId !== null) {
 				// Handle AnkiId as number, string, or numeric string
 				if (typeof data.AnkiId === 'number') {
-					flashcard.ankiId = data.AnkiId;
+					if (Number.isInteger(data.AnkiId) && data.AnkiId > 0) {
+						flashcard.ankiId = data.AnkiId;
+					} else {
+						return invalidFlashcard(`AnkiId must be a positive integer, got: ${data.AnkiId}`);
+					}
 				} else if (typeof data.AnkiId === 'string') {
 					const parsedId = Number(data.AnkiId);
 					if (Number.isInteger(parsedId) && parsedId > 0) {

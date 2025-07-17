@@ -43,6 +43,7 @@ describe('YankiConnectAnkiService', () => {
         },
         tags: ['math', 'basic', 'obsidian-synced', 'obsidian-vault::test-vault', 'obsidian-file::notes/file.md'],
         ankiId: 12345,
+        warnings: []
       });
     });
 

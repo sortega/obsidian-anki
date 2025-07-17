@@ -1,5 +1,5 @@
 import { MarkdownRenderChild, MarkdownPostProcessorContext } from 'obsidian';
-import { Flashcard, HtmlFlashcard, InvalidFlashcard, BlockFlashcardParser } from './flashcard';
+import { Flashcard, HtmlFlashcard, InvalidFlashcard, BlockFlashcardParser, NoteType } from './flashcard';
 import { MarkdownService } from './markdown-service';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
@@ -19,6 +19,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		containerEl.empty();
 		containerEl.addClass('flashcard-container');
 
+		// Add warning styling if warnings exist
+		if (this.htmlFlashcard.warnings.length > 0) {
+			containerEl.addClass('flashcard-warning');
+		}
+
 		// Header with note type
 		const header = containerEl.createEl('div', { cls: 'flashcard-header' });
 		header.createEl('span', { 
@@ -32,6 +37,26 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 				text: 'NEW',
 				cls: 'flashcard-new-indicator'
 			});
+		}
+
+		// Add warnings indicator if warnings exist
+		if (this.htmlFlashcard.warnings.length > 0) {
+			const warningContainer = header.createEl('span', { 
+				cls: 'flashcard-warning-container'
+			});
+			
+			const warningIcon = warningContainer.createEl('span', { 
+				cls: 'flashcard-warning-icon',
+				text: 'ⓘ'
+			});
+			
+			const warningTitle = warningContainer.createEl('span', { 
+				cls: 'flashcard-warning-title',
+				text: 'Warnings'
+			});
+			
+			// Create hover popup for warnings
+			this.setupHoverPopup(warningContainer, this.htmlFlashcard.warnings.join('\n'), 'warning');
 		}
 
 		// Content area
@@ -74,12 +99,76 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 	private capitalizeFirst(str: string): string {
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	}
+
+	private setupHoverPopup(triggerElement: HTMLElement, message: string, type: 'warning' | 'error') {
+		let popup: HTMLElement | null = null;
+		let hideTimeout: NodeJS.Timeout | null = null;
+
+		const showPopup = () => {
+			if (hideTimeout) {
+				clearTimeout(hideTimeout);
+				hideTimeout = null;
+			}
+
+			if (popup) return; // Already showing
+
+			popup = document.body.createEl('div', {
+				cls: `flashcard-popup flashcard-popup-${type}`,
+				text: message
+			});
+
+			// Position the popup relative to the trigger element
+			const rect = triggerElement.getBoundingClientRect();
+			popup.style.position = 'fixed';
+			popup.style.left = `${rect.left}px`;
+			popup.style.top = `${rect.bottom + 5}px`;
+			popup.style.zIndex = '1000';
+		};
+
+		const hidePopup = () => {
+			if (popup) {
+				popup.remove();
+				popup = null;
+			}
+			if (hideTimeout) {
+				clearTimeout(hideTimeout);
+				hideTimeout = null;
+			}
+		};
+
+		const scheduleHide = () => {
+			hideTimeout = setTimeout(hidePopup, 500); // 500ms delay
+		};
+
+		// Show popup on hover
+		triggerElement.addEventListener('mouseenter', showPopup);
+		
+		// Hide popup when leaving trigger (with delay)
+		triggerElement.addEventListener('mouseleave', scheduleHide);
+
+		// Cancel hide if re-entering trigger quickly
+		triggerElement.addEventListener('mouseenter', () => {
+			if (hideTimeout) {
+				clearTimeout(hideTimeout);
+				hideTimeout = null;
+			}
+		});
+
+		// Clean up popup when component is unloaded
+		this.register(() => hidePopup());
+	}
 }
 
 export class FlashcardCodeBlockProcessor {
-	static render(vaultName: string, source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
+	static render(
+		vaultName: string,
+		source: string,
+		el: HTMLElement,
+		ctx: MarkdownPostProcessorContext,
+		availableNoteTypes?: NoteType[]
+	) {
 		// Parse flashcard with line positions - we don't have exact line positions here, so use 0
-		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, 0, 0);
+		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, 0, 0, availableNoteTypes);
 		
 		if ('error' in flashcard) {
 			// If parsing fails, show error UI with original code block
@@ -87,26 +176,22 @@ export class FlashcardCodeBlockProcessor {
 			
 			// Error header with info icon
 			const errorHeader = el.createEl('div', { cls: 'flashcard-error-header' });
-			const errorIcon = errorHeader.createEl('span', { 
+			const errorContainer = errorHeader.createEl('span', { 
+				cls: 'flashcard-error-container'
+			});
+			
+			const errorIcon = errorContainer.createEl('span', { 
 				cls: 'flashcard-error-icon',
 				text: 'ⓘ'
 			});
 			
-			const errorTitle = errorHeader.createEl('span', { 
+			const errorTitle = errorContainer.createEl('span', { 
 				cls: 'flashcard-error-title',
 				text: 'Invalid Flashcard'
 			});
 			
-			// Create error message that appears inside the header on click
-			const errorMessage = errorHeader.createEl('div', { 
-				cls: 'flashcard-error-message',
-				text: flashcard.error || 'Unknown parsing error'
-			});
-			
-			errorIcon.addEventListener('click', () => {
-				const isVisible = errorMessage.style.display !== 'none';
-				errorMessage.style.display = isVisible ? 'none' : 'block';
-			});
+			// Create hover popup for error
+			FlashcardCodeBlockProcessor.setupHoverPopup(errorContainer, flashcard.error || 'Unknown parsing error', 'error');
 			
 			// Original code block content
 			const codeEl = el.createEl('pre', { cls: 'flashcard-error-content' });
@@ -119,5 +204,63 @@ export class FlashcardCodeBlockProcessor {
 			const renderer = new FlashcardRenderer(el, htmlFlashcard);
 			ctx.addChild(renderer);
 		}
+	}
+
+	static setupHoverPopup(triggerElement: HTMLElement, message: string, type: 'warning' | 'error') {
+		let popup: HTMLElement | null = null;
+		let hideTimeout: NodeJS.Timeout | null = null;
+
+		const showPopup = () => {
+			if (hideTimeout) {
+				clearTimeout(hideTimeout);
+				hideTimeout = null;
+			}
+
+			if (popup) return; // Already showing
+
+			popup = document.body.createEl('div', {
+				cls: `flashcard-popup flashcard-popup-${type}`,
+				text: message
+			});
+
+			// Position the popup relative to the trigger element
+			const rect = triggerElement.getBoundingClientRect();
+			popup.style.position = 'fixed';
+			popup.style.left = `${rect.left}px`;
+			popup.style.top = `${rect.bottom + 5}px`;
+			popup.style.zIndex = '1000';
+		};
+
+		const hidePopup = () => {
+			if (popup) {
+				popup.remove();
+				popup = null;
+			}
+			if (hideTimeout) {
+				clearTimeout(hideTimeout);
+				hideTimeout = null;
+			}
+		};
+
+		const scheduleHide = () => {
+			hideTimeout = setTimeout(hidePopup, 300); // 300ms delay
+		};
+
+		// Show popup on hover
+		triggerElement.addEventListener('mouseenter', showPopup);
+		
+		// Hide popup when leaving trigger (with delay)
+		triggerElement.addEventListener('mouseleave', scheduleHide);
+
+		// Cancel hide if re-entering trigger quickly
+		triggerElement.addEventListener('mouseenter', () => {
+			if (hideTimeout) {
+				clearTimeout(hideTimeout);
+				hideTimeout = null;
+			}
+		});
+
+		// Clean up on page unload
+		window.addEventListener('beforeunload', hidePopup);
 	}
 }

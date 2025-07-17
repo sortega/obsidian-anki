@@ -3,8 +3,6 @@
 ## Feature Roadmap
 
 ### Basic functionality
-- Flashcard parsing warnings
-  - Warning: unknown fields
 
 ### Cloze flashcards special treatment
 - Validate cloze markers

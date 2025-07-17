@@ -241,7 +241,8 @@ export class SyncExecutionModal extends Modal {
 					noteType: deletedNote.modelName,
 					tags: deletedNote.tags || [],
 					contentFields: {},
-					ankiId: deletedNote.noteId
+					ankiId: deletedNote.noteId,
+					warnings: []
 				};
 				
 				this.results.successfulOperations.push({
@@ -264,7 +265,8 @@ export class SyncExecutionModal extends Modal {
 					noteType: deletedNote.modelName,
 					tags: deletedNote.tags || [],
 					contentFields: {},
-					ankiId: deletedNote.noteId
+					ankiId: deletedNote.noteId,
+					warnings: []
 				};
 				
 				this.results.failedOperations.push({
@@ -296,7 +298,8 @@ export class SyncExecutionModal extends Modal {
 					noteType: orphanedNote.modelName,
 					tags: orphanedNote.tags || [],
 					contentFields: {},
-					ankiId: orphanedNote.noteId
+					ankiId: orphanedNote.noteId,
+					warnings: []
 				};
 				
 				this.results.successfulOperations.push({
@@ -315,7 +318,8 @@ export class SyncExecutionModal extends Modal {
 					noteType: orphanedNote.modelName,
 					tags: orphanedNote.tags || [],
 					contentFields: {},
-					ankiId: orphanedNote.noteId
+					ankiId: orphanedNote.noteId,
+					warnings: []
 				};
 				
 				this.results.failedOperations.push({

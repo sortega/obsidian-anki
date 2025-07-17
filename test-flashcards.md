@@ -92,3 +92,17 @@ Tags: geography, europe
 Front: Simple question
 Back: Simple answer
 ```
+
+## Cards with warnings
+
+```flashcard
+NoteType: UnknownType
+Front: foo
+Back: bar
+```
+
+```flashcard
+NoteType: Basic
+Front: My **front**
+Unknown: My *unknown field*
+```

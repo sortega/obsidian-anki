@@ -46,14 +46,17 @@ export class MarkdownService {
 
 		tags.sort()
 
-		return {
+		const htmlFlashcard: HtmlFlashcard = {
 			sourcePath: flashcard.sourcePath,
 			lineStart: flashcard.lineStart,
 			lineEnd: flashcard.lineEnd,
 			noteType: flashcard.noteType,
 			ankiId: flashcard.ankiId,
 			tags,
-			htmlFields
+			htmlFields,
+			warnings: flashcard.warnings
 		};
+		
+		return htmlFlashcard;
 	}
 }
