@@ -15,12 +15,20 @@ Use note properties (from the front-matter) to influence all the flashcards in t
 - Render as highlighted text when cursor is elsewhere
 
 ### Syncing
+- Find Anki Notes when their ids are referenced even if the lack the `obsidian-*` tags
+- Better error handling for note type mismatches
 - Sync local images
 - Sync other media (low priority)
 
 ### Import flashcard
 - Button, palette action and shortcut to import a flashcard
 - Modal to search for the card and preview what would be inserted
+
+### UI
+- Edit flashcards by clicking anywhere inside them
+- Enable the plugin on the mobile app, but just for editing and rendering flashcards rather than syncing
+- More compact rendering of flashcards
+- Better diff rendering
 
 ## Technical Architecture Decisions
 
