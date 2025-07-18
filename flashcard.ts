@@ -1,5 +1,11 @@
 import * as yaml from 'js-yaml';
-import { DEFAULT_NOTE_TYPE, DEFAULT_DECK, METADATA_FIELDS } from './constants';
+import { DEFAULT_NOTE_TYPE, DEFAULT_DECK, METADATA_FIELDS, ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
+
+// Note metadata interface for front-matter processing
+export interface NoteMetadata {
+	[ANKI_DECK_PROPERTY]?: string;
+	[ANKI_TAGS_PROPERTY]?: string[];
+}
 
 // Note type definition for flashcard templates
 export interface NoteType {
@@ -45,7 +51,7 @@ export class BlockFlashcardParser {
 		return typeof data === 'object' && data !== null && !Array.isArray(data);
 	}
 
-	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, defaultDeck: string, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
+	static parseFlashcard(source: string, sourcePath: string, lineStart: number, lineEnd: number, defaultDeck: string, noteMetadata: NoteMetadata, availableNoteTypes?: NoteType[]): Flashcard | InvalidFlashcard {
 		function invalidFlashcard(error: string): InvalidFlashcard {
 			return { sourcePath, lineStart, lineEnd, error };
 		}
@@ -131,24 +137,18 @@ export class BlockFlashcardParser {
 				};
 			}
 
-			// Remove special field handling - backlinks are now handled via tags
-
 			// Construct Flashcard with proper structure and mandatory defaults
 			const flashcard: Flashcard = {
 				sourcePath,
 				lineStart,
 				lineEnd,
 				noteType: ('NoteType' in data && typeof data.NoteType === 'string') 
-					? data.NoteType 
+					? data.NoteType
 					: DEFAULT_NOTE_TYPE,
-				tags: ('Tags' in data && Array.isArray(data.Tags)) 
-					? data.Tags as string[] 
-					: [],
+				tags: this.parseTags(data, noteMetadata),
 				contentFields: contentFields,
 				warnings: [],
-				deck: ('Deck' in data && typeof data.Deck === 'string' && data.Deck.trim().length > 0) 
-					? data.Deck.trim() 
-					: defaultDeck
+				deck: this.parseDeck(data, noteMetadata, defaultDeck)
 			};
 			
 			// Check for warnings if availableNoteTypes is provided
@@ -201,6 +201,26 @@ export class BlockFlashcardParser {
 			}
 			return invalidFlashcard(`Parsing error: ${error instanceof Error ? error.message : String(error)}`);
 		}
+	}
+
+	private static parseDeck(data: Record<string, unknown>, noteMetadata: NoteMetadata, defaultDeck: string): string {
+		// Flashcard-level Deck field takes highest precedence
+		if ('Deck' in data && typeof data.Deck === 'string' && data.Deck.trim().length > 0) {
+			return data.Deck.trim();
+		}
+		// File-level AnkiDeck front-matter takes second precedence
+		if (noteMetadata[ANKI_DECK_PROPERTY] && noteMetadata[ANKI_DECK_PROPERTY].trim().length > 0) {
+			return noteMetadata[ANKI_DECK_PROPERTY].trim();
+		}
+		// Plugin default deck as fallback
+		return defaultDeck;
+	}
+
+	private static parseTags(data: Record<string, unknown>, noteMetadata: NoteMetadata): string[] {
+		const flashcardTags = ('Tags' in data && Array.isArray(data.Tags)) ? data.Tags as string[] : [];
+		const frontMatterTags = noteMetadata[ANKI_TAGS_PROPERTY] || [];
+		const allTags = [...frontMatterTags, ...flashcardTags];
+		return [...new Set(allTags)].sort();
 	}
 }
 

@@ -80,6 +80,34 @@ Tags:
 - **Default deck**: Cards without a Deck field use the default deck from plugin settings
 - **Automatic moves**: Cards are automatically moved to the correct deck during sync
 
+### Front-matter Global Settings
+
+You can set default deck and tags for all flashcards in a file using YAML front-matter:
+
+```yaml
+---
+AnkiDeck: Science::Physics
+AnkiTags:
+  - physics-101
+  - semester-1
+---
+```
+
+```flashcard
+NoteType: Basic
+Front: What is Newton's first law?
+Back: An object at rest stays at rest unless acted upon by a force
+Tags:
+  - newton
+  - laws
+```
+
+**Precedence Rules**:
+- **Deck**: Flashcard `Deck:` field > Front-matter `AnkiDeck` > Plugin default
+- **Tags**: Front-matter `AnkiTags` are merged with flashcard `Tags:` (duplicates removed automatically)
+
+**Example**: The above flashcard will be placed in `Science::Physics` deck and tagged with `physics-101`, `semester-1`, `newton`, `laws`.
+
 ### Advanced Flashcard Formatting
 
 The plugin supports rich markdown content within flashcards:

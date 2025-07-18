@@ -27,12 +27,16 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	private ankiStatusBar: HTMLElement;
 	availableDecks: string[] = []; // Made public for settings tab access
 	private insertFlashcardButton: HTMLElement;
+	private flashcardProcessor: FlashcardCodeBlockProcessor;
 
 	async onload() {
 		await this.loadSettings();
 
 		// Initialize Anki Service
 		this.ankiService = new YankiConnectAnkiService(this.settings.ignoredTags);
+
+		// Initialize Flashcard Processor
+		this.flashcardProcessor = new FlashcardCodeBlockProcessor(this.app);
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (evt: MouseEvent) => {
@@ -83,7 +87,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 		// Register flashcard code block processor
 		this.registerMarkdownCodeBlockProcessor('flashcard', (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
-			FlashcardCodeBlockProcessor.render(this.app.vault.getName(), source, el, ctx, this.settings.defaultDeck, this.settings.availableNoteTypes);
+			this.flashcardProcessor.render(source, el, ctx, this.settings.defaultDeck, this.settings.availableNoteTypes);
 		});
 
 		// Register commands for command palette

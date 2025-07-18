@@ -2,12 +2,6 @@
 
 ## Feature Roadmap
 
-### Note metadata
-Use note properties (from the front-matter) to influence all the flashcards in that file:
-
-- Anki-Deck: override the default deck
-- Anki-Tags: all these tags are added
-
 ### Cloze flashcards special treatment
 - Validate cloze markers
 - Render the note differently

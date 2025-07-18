@@ -137,3 +137,107 @@ Tags:
   - spanish
   - greetings
 ```
+
+## Front-matter Metadata Examples
+
+Here are examples showing how front-matter can be used to set default deck and tags for all flashcards in a file:
+
+### Example 1: Front-matter with Default Deck
+
+In a file with this front-matter:
+```yaml
+---
+AnkiDeck: Math::Algebra
+---
+```
+
+All flashcards without explicit `Deck:` field will use `Math::Algebra`:
+
+```flashcard
+NoteType: Basic
+Front: What is the quadratic formula?
+Back: x = (-b ± √(b²-4ac)) / 2a
+Tags:
+  - formulas
+```
+
+### Example 2: Front-matter with Default Tags
+
+In a file with this front-matter:
+```yaml
+---
+AnkiTags:
+  - course-material
+  - semester-1
+---
+```
+
+All flashcards will include these tags in addition to their own:
+
+```flashcard
+NoteType: Basic
+Front: What is integration?
+Back: The reverse process of differentiation
+Tags:
+  - calculus
+  - concepts
+```
+
+### Example 3: Front-matter with Both Deck and Tags
+
+In a file with this front-matter:
+```yaml
+---
+AnkiDeck: Science::Physics
+AnkiTags:
+  - physics-101
+  - chapter-3
+---
+```
+
+Multiple flashcards inherit the deck and tags:
+
+```flashcard
+NoteType: Basic
+Front: What is Newton's first law?
+Back: An object at rest stays at rest unless acted upon by a force
+Tags:
+  - newton
+  - laws
+```
+
+```flashcard
+NoteType: Basic
+Front: What is the formula for kinetic energy?
+Back: KE = ½mv²
+Tags:
+  - energy
+  - formulas
+```
+
+### Example 4: Precedence - Flashcard Overrides Front-matter
+
+With front-matter deck `Science::Physics`, this flashcard overrides it:
+
+```flashcard
+NoteType: Basic
+Deck: Math::Geometry
+Front: What is the area of a circle?
+Back: A = πr²
+Tags:
+  - formulas
+```
+
+### Example 5: Tag Deduplication
+
+With front-matter tags `[global, shared]`, duplicates are automatically removed:
+
+```flashcard
+NoteType: Basic
+Front: Test question
+Back: Test answer
+Tags:
+  - shared
+  - local
+  - global
+```

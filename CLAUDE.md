@@ -40,8 +40,8 @@ The plugin follows hexagonal architecture principles with clean separation betwe
 - `FlashcardInsertModal` - Modal for selecting note types and inserting flashcard blocks
 - `FlashcardRenderer` - Renders `HtmlFlashcard` objects with proper styling (accepts pre-rendered HTML content)
 - `MarkdownService` - Handles markdown-to-HTML conversion and provides `toHtmlFlashcard()` conversion method
-- `FlashcardCodeBlockProcessor` - Orchestrates flashcard code block processing and error display
-- `BlockFlashcardParser` - Parses YAML-formatted flashcard content with detailed error reporting
+- `FlashcardCodeBlockProcessor` - Instance-based processor with dependency injection for App access (non-static)
+- `BlockFlashcardParser` - Parses YAML-formatted flashcard content with modular `parseDeck()` and `parseTags()` methods
 - `ObsidianAnkiSettingTab` - Settings interface for plugin configuration and note type cache
 - `SyncProgressModal` - Modal for vault scanning and sync progress tracking
 - `SyncConfirmationModal` - Modal for reviewing and confirming sync changes
@@ -62,6 +62,31 @@ Tags:
 ```
 
 **Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `Tags: "topic1, topic2"` are not supported and will cause parsing errors.
+
+## Front-matter Processing
+
+The plugin supports YAML front-matter to set default properties for all flashcards in a file:
+
+```yaml
+---
+AnkiDeck: Math::Algebra
+AnkiTags:
+  - course-material
+  - semester-1
+---
+```
+
+### Property Precedence
+
+- **Deck Selection**: `Deck:` field > `AnkiDeck` front-matter > plugin default
+- **Tag Merging**: Front-matter `AnkiTags` are combined with flashcard `Tags:` (duplicates automatically removed)
+
+### Implementation Details
+
+- **NoteMetadata Interface**: Defined in `flashcard.ts` with `AnkiDeck?` and `AnkiTags?` properties
+- **Property Constants**: `ANKI_DECK_PROPERTY` and `ANKI_TAGS_PROPERTY` in `constants.ts`
+- **Front-matter Extraction**: Both sync analysis and live preview extract metadata from file cache
+- **Type Safety**: Uses `FrontMatterCache` type instead of `any` for better type checking
 
 ## Deck Management
 

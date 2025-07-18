@@ -16,3 +16,7 @@ export const DEFAULT_IMPORT_FILE = 'Imported Flashcards.md';
 
 // Tag filtering
 export const DEFAULT_IGNORED_TAGS = ['marked', 'leech'];
+
+// Front-matter property names
+export const ANKI_DECK_PROPERTY = 'AnkiDeck';
+export const ANKI_TAGS_PROPERTY = 'AnkiTags';

@@ -158,7 +158,7 @@ export class SyncExecutionModal extends Modal {
 					await this.ankiService.updateNote(ankiNote.noteId, htmlFlashcard);
 					
 					// Check if deck has changed and move card if needed
-					if (ankiNote.deckNames.length > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
+					if (ankiNote.deckNames.size > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
 						await this.ankiService.moveCard(ankiNote.noteId, htmlFlashcard.deck);
 						console.log(`📦 Moved card ${ankiNote.noteId} from '${ankiNote.deckNames}' to '${htmlFlashcard.deck}'`);
 					}

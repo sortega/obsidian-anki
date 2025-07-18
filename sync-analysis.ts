@@ -1,10 +1,12 @@
-import { App, Modal, Notice, CachedMetadata, TFile, MarkdownView } from 'obsidian';
+import { App, Modal, Notice, CachedMetadata, TFile, MarkdownView, FrontMatterCache } from 'obsidian';
 import { AnkiService, AnkiNote } from './anki-service';
 import { NoteType } from './flashcard';
 import { Flashcard, HtmlFlashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser } from './flashcard';
 import { MarkdownService } from './markdown-service';
 import { FlashcardRenderer } from './flashcard-renderer';
 import { SyncExecutionModal } from './sync-execution';
+import { NoteMetadata } from './flashcard';
+import { ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
 
 export interface SyncAnalysis {
 	totalFiles: number;
@@ -196,6 +198,9 @@ export class SyncProgressModal extends Modal {
 			return flashcards;
 		}
 		
+		// Extract note metadata from front-matter
+		const noteMetadata: NoteMetadata = this.extractNoteMetadata(cache.frontmatter);
+		
 		// Get code blocks from sections (cache.blocks is for different purpose)
 		// Use sections which contains code blocks with type information
 		const codeBlocks = cache.sections?.filter(section => section.type === 'code') ?? [];
@@ -237,6 +242,7 @@ export class SyncProgressModal extends Modal {
 				startLine + 1, // 1-indexed for user display
 				endLine + 1,
 				this.settings.defaultDeck,
+				noteMetadata,
 				this.availableNoteTypes
 			);
 			
@@ -335,7 +341,7 @@ export class SyncProgressModal extends Modal {
 			}
 			
 			// Compare deck names
-			if (ankiNote.deckNames.length > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
+			if (ankiNote.deckNames.size > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
 				console.log('Deck mismatch:', {
 					obsidian: htmlFlashcard.deck,
 					anki: ankiNote.deckNames
@@ -384,6 +390,32 @@ export class SyncProgressModal extends Modal {
 		this.progressBar.style.width = `${percentage}%`;
 		this.progressText.setText(`${percentage}% complete`);
 		this.statusText.setText(statusText);
+	}
+	
+	private extractNoteMetadata(frontmatter?: FrontMatterCache): NoteMetadata {
+		const metadata: NoteMetadata = {};
+		
+		if (!frontmatter) {
+			return metadata;
+		}
+		
+		// Extract AnkiDeck
+		if (ANKI_DECK_PROPERTY in frontmatter && typeof frontmatter[ANKI_DECK_PROPERTY] === 'string') {
+			metadata[ANKI_DECK_PROPERTY] = frontmatter[ANKI_DECK_PROPERTY];
+		}
+		
+		// Extract AnkiTags
+		if (!(ANKI_TAGS_PROPERTY in frontmatter) || !Array.isArray(frontmatter[ANKI_TAGS_PROPERTY])) {
+			return metadata;
+		}
+		
+		// Ensure all tags are strings
+		const tags = frontmatter[ANKI_TAGS_PROPERTY].filter((tag: any) => typeof tag === 'string');
+		if (tags.length > 0) {
+			metadata[ANKI_TAGS_PROPERTY] = tags;
+		}
+		
+		return metadata;
 	}
 }
 
