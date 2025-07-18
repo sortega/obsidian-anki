@@ -5,7 +5,7 @@ import { Flashcard, HtmlFlashcard, InvalidFlashcard, FlashcardBlock, BlockFlashc
 import { MarkdownService } from './markdown-service';
 import { FlashcardRenderer } from './flashcard-renderer';
 import { SyncExecutionModal } from './sync-execution';
-import { NoteMetadata } from './flashcard';
+import { NoteMetadata, parseNoteMetadata } from './note-metadata';
 import { ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
 
 export interface SyncAnalysis {
@@ -199,7 +199,7 @@ export class SyncProgressModal extends Modal {
 		}
 		
 		// Extract note metadata from front-matter
-		const noteMetadata: NoteMetadata = this.extractNoteMetadata(cache.frontmatter);
+		const noteMetadata: NoteMetadata = parseNoteMetadata(cache.frontmatter);
 		
 		// Get code blocks from sections (cache.blocks is for different purpose)
 		// Use sections which contains code blocks with type information
@@ -392,31 +392,6 @@ export class SyncProgressModal extends Modal {
 		this.statusText.setText(statusText);
 	}
 	
-	private extractNoteMetadata(frontmatter?: FrontMatterCache): NoteMetadata {
-		const metadata: NoteMetadata = {};
-		
-		if (!frontmatter) {
-			return metadata;
-		}
-		
-		// Extract AnkiDeck
-		if (ANKI_DECK_PROPERTY in frontmatter && typeof frontmatter[ANKI_DECK_PROPERTY] === 'string') {
-			metadata[ANKI_DECK_PROPERTY] = frontmatter[ANKI_DECK_PROPERTY];
-		}
-		
-		// Extract AnkiTags
-		if (!(ANKI_TAGS_PROPERTY in frontmatter) || !Array.isArray(frontmatter[ANKI_TAGS_PROPERTY])) {
-			return metadata;
-		}
-		
-		// Ensure all tags are strings
-		const tags = frontmatter[ANKI_TAGS_PROPERTY].filter((tag: any) => typeof tag === 'string');
-		if (tags.length > 0) {
-			metadata[ANKI_TAGS_PROPERTY] = tags;
-		}
-		
-		return metadata;
-	}
 }
 
 export class SyncConfirmationModal extends Modal {

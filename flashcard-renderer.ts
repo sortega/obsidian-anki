@@ -1,7 +1,7 @@
 import { MarkdownRenderChild, MarkdownPostProcessorContext, App, MarkdownView } from 'obsidian';
-import { Flashcard, HtmlFlashcard, InvalidFlashcard, BlockFlashcardParser, NoteType, NoteMetadata } from './flashcard';
+import { Flashcard, HtmlFlashcard, InvalidFlashcard, BlockFlashcardParser, NoteType } from './flashcard';
 import { MarkdownService } from './markdown-service';
-import { ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
+import { NoteMetadata, parseNoteMetadata } from './note-metadata';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private htmlFlashcard: HtmlFlashcard;
@@ -216,7 +216,7 @@ export class FlashcardCodeBlockProcessor {
 		availableNoteTypes?: NoteType[]
 	) {
 		// Extract note metadata from the current file's front-matter
-		const noteMetadata = this.extractNoteMetadataFromContext(ctx);
+		const noteMetadata = parseNoteMetadata(ctx.frontmatter);
 		
 		// Get actual line positions from section info
 		const sectionInfo = ctx.getSectionInfo(el);
@@ -320,38 +320,4 @@ export class FlashcardCodeBlockProcessor {
 		window.addEventListener('beforeunload', hidePopup);
 	}
 	
-	private extractNoteMetadataFromContext(ctx: MarkdownPostProcessorContext): NoteMetadata {
-		// Try to access the front-matter through the section info
-		// In live preview mode, we need to get the file and extract front-matter
-		if (!ctx.sourcePath) {
-			return {};
-		}
-		
-		const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
-		if (!file || !('stat' in file)) {
-			return {};
-		}
-		
-		const cache = this.app.metadataCache.getFileCache(file);
-		if (!cache?.frontmatter) {
-			return {};
-		}
-		
-		const metadata: NoteMetadata = {};
-
-		// Extract AnkiDeck
-		if (ANKI_DECK_PROPERTY in cache.frontmatter && typeof cache.frontmatter[ANKI_DECK_PROPERTY] === 'string') {
-			metadata[ANKI_DECK_PROPERTY] = cache.frontmatter[ANKI_DECK_PROPERTY];
-		}
-		
-		// Extract AnkiTags
-		if (ANKI_TAGS_PROPERTY in cache.frontmatter && Array.isArray(cache.frontmatter[ANKI_TAGS_PROPERTY])) {
-			const tags = cache.frontmatter[ANKI_TAGS_PROPERTY].filter((tag: any) => typeof tag === 'string');
-			if (tags.length > 0) {
-				metadata[ANKI_TAGS_PROPERTY] = tags;
-			}
-		}
-		
-		return metadata;
-	}
 }

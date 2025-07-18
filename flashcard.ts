@@ -1,11 +1,6 @@
 import * as yaml from 'js-yaml';
 import { DEFAULT_NOTE_TYPE, DEFAULT_DECK, METADATA_FIELDS, ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
-
-// Note metadata interface for front-matter processing
-export interface NoteMetadata {
-	[ANKI_DECK_PROPERTY]?: string;
-	[ANKI_TAGS_PROPERTY]?: string[];
-}
+import { NoteMetadata } from './note-metadata';
 
 // Note type definition for flashcard templates
 export interface NoteType {

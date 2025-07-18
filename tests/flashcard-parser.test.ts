@@ -1,4 +1,5 @@
-import { BlockFlashcardParser, Flashcard, InvalidFlashcard, NoteType, NoteMetadata } from '../flashcard';
+import { BlockFlashcardParser, Flashcard, InvalidFlashcard, NoteType } from '../flashcard';
+import { NoteMetadata } from '../note-metadata';
 import { DEFAULT_DECK, DEFAULT_NOTE_TYPE, ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from '../constants';
 
 describe('BlockFlashcardParser', () => {
