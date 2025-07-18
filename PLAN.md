@@ -19,7 +19,6 @@
 - Modal to search for the card and preview what would be inserted
 
 ### UI
-- Edit flashcards by clicking anywhere inside them
 - Enable the plugin on the mobile app, but just for editing and rendering flashcards rather than syncing
 - More compact rendering of flashcards
 - Better diff rendering

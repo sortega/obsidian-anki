@@ -765,7 +765,7 @@ export class SyncConfirmationModal extends Modal {
 			
 			// Render the deleted flashcard using FlashcardRenderer directly
 			const flashcardContainer = item.createEl('div');
-			const renderer = new FlashcardRenderer(flashcardContainer, ankiAsHtmlFlashcard, this.settings.defaultDeck);
+			const renderer = new FlashcardRenderer(flashcardContainer, ankiAsHtmlFlashcard, this.settings.defaultDeck, this.app);
 			renderer.onload();
 		}
 		
@@ -840,7 +840,7 @@ export class SyncConfirmationModal extends Modal {
 	private renderFlashcard(container: HTMLElement, flashcard: Flashcard) {
 		const flashcardContainer = container.createEl('div');
 		const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
-		const renderer = new FlashcardRenderer(flashcardContainer, htmlFlashcard, this.settings.defaultDeck);
+		const renderer = new FlashcardRenderer(flashcardContainer, htmlFlashcard, this.settings.defaultDeck, this.app);
 		renderer.onload()
 	}
 
@@ -874,10 +874,10 @@ export class SyncConfirmationModal extends Modal {
 		const obsidianAsHtmlFlashcard = MarkdownService.toHtmlFlashcard(obsidian, this.vaultName);
 		
 		// Render both versions using the existing FlashcardRenderer
-		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsHtmlFlashcard, this.settings.defaultDeck);
+		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsHtmlFlashcard, this.settings.defaultDeck, this.app);
 		ankiRenderer.onload();
 		
-		const obsidianRenderer = new FlashcardRenderer(obsidianContainer, obsidianAsHtmlFlashcard, this.settings.defaultDeck);
+		const obsidianRenderer = new FlashcardRenderer(obsidianContainer, obsidianAsHtmlFlashcard, this.settings.defaultDeck, this.app);
 		obsidianRenderer.onload();
 	}
 }

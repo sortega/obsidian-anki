@@ -1,15 +1,17 @@
-import { MarkdownRenderChild, MarkdownPostProcessorContext, App } from 'obsidian';
+import { MarkdownRenderChild, MarkdownPostProcessorContext, App, MarkdownView } from 'obsidian';
 import { Flashcard, HtmlFlashcard, InvalidFlashcard, BlockFlashcardParser, NoteType, NoteMetadata } from './flashcard';
 import { MarkdownService } from './markdown-service';
 import { ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private htmlFlashcard: HtmlFlashcard;
+	private app: App;
 	private defaultDeck: string;
 
-	constructor(containerEl: HTMLElement, htmlFlashcard: HtmlFlashcard, defaultDeck: string) {
+	constructor(containerEl: HTMLElement, htmlFlashcard: HtmlFlashcard, defaultDeck: string, app: App) {
 		super(containerEl);
 		this.htmlFlashcard = htmlFlashcard;
+		this.app = app;
 		this.defaultDeck = defaultDeck;
 	}
 
@@ -21,6 +23,12 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		const { containerEl } = this;
 		containerEl.empty();
 		containerEl.addClass('flashcard-container');
+		containerEl.addClass('flashcard-clickable');
+
+		// Add click handler to navigate to source
+		containerEl.addEventListener('click', () => {
+			this.navigateToSource();
+		});
 
 		// Add warning styling if warnings exist
 		if (this.htmlFlashcard.warnings.length > 0) {
@@ -178,6 +186,19 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		// Clean up popup when component is unloaded
 		this.register(() => hidePopup());
 	}
+
+	private navigateToSource() {
+		const { sourcePath, lineStart } = this.htmlFlashcard;
+		
+		// Open the file and navigate to the second line (first editable field)
+		this.app.workspace.openLinkText(sourcePath, sourcePath).then(() => {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (activeView) {
+				const editor = activeView.editor;
+				editor.setCursor(lineStart + 1, 0);
+			}
+		});
+	}
 }
 
 export class FlashcardCodeBlockProcessor {
@@ -197,8 +218,13 @@ export class FlashcardCodeBlockProcessor {
 		// Extract note metadata from the current file's front-matter
 		const noteMetadata = this.extractNoteMetadataFromContext(ctx);
 		
-		// Parse flashcard with line positions - we don't have exact line positions here, so use 0
-		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, 0, 0, defaultDeck, noteMetadata, availableNoteTypes);
+		// Get actual line positions from section info
+		const sectionInfo = ctx.getSectionInfo(el);
+		const lineStart = sectionInfo?.lineStart ?? 0;
+		const lineEnd = sectionInfo?.lineEnd ?? 0;
+		
+		// Parse flashcard with real line positions
+		const flashcard = BlockFlashcardParser.parseFlashcard(source, ctx.sourcePath, lineStart, lineEnd, defaultDeck, noteMetadata, availableNoteTypes);
 		
 		if ('error' in flashcard) {
 			// If parsing fails, show error UI with original code block
@@ -231,7 +257,7 @@ export class FlashcardCodeBlockProcessor {
 		} else {
 			// Valid flashcard - convert to HTML and render it
 			const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.app.vault.getName());
-			const renderer = new FlashcardRenderer(el, htmlFlashcard, defaultDeck);
+			const renderer = new FlashcardRenderer(el, htmlFlashcard, defaultDeck, this.app);
 			ctx.addChild(renderer);
 		}
 	}

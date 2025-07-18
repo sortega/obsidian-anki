@@ -29,6 +29,16 @@ If your plugin does not need CSS, delete this file.
     font-family: var(--font-interface);
 }
 
+.flashcard-clickable {
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.flashcard-clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
 .flashcard-header {
     display: flex;
     align-items: center;
