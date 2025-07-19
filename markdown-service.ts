@@ -1,6 +1,6 @@
-import { marked } from 'marked';
-import { Flashcard, HtmlFlashcard } from './flashcard';
-import { OBSIDIAN_SYNC_TAG, OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_FILE_TAG_PREFIX } from './constants';
+import {marked} from 'marked';
+import {Flashcard, HtmlFlashcard} from './flashcard';
+import {OBSIDIAN_FILE_TAG_PREFIX, OBSIDIAN_SYNC_TAG, OBSIDIAN_VAULT_TAG_PREFIX} from './constants';
 
 export class MarkdownService {
 	private static initialized = false;
@@ -27,7 +27,7 @@ export class MarkdownService {
 		return marked.parse(markdown) as string;
 	}
 
-	// Convert Flashcard with markdown fields to HtmlFlashcard with HTML fields
+	// Convert Flashcard with Markdown fields to HtmlFlashcard with HTML fields
 	static toHtmlFlashcard(flashcard: Flashcard, vaultName: string): HtmlFlashcard {
 		const htmlFields: Record<string, string> = {};
 		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
@@ -46,7 +46,7 @@ export class MarkdownService {
 
 		tags.sort()
 
-		const htmlFlashcard: HtmlFlashcard = {
+		return {
 			sourcePath: flashcard.sourcePath,
 			lineStart: flashcard.lineStart,
 			lineEnd: flashcard.lineEnd,
@@ -57,7 +57,5 @@ export class MarkdownService {
 			warnings: flashcard.warnings,
 			deck: flashcard.deck
 		};
-		
-		return htmlFlashcard;
 	}
 }

@@ -1,4 +1,4 @@
-import { parseNoteMetadata, NoteMetadata } from '../note-metadata';
+import {parseNoteMetadata} from '../note-metadata';
 
 describe('parseNoteMetadata', () => {
 	describe('valid inputs', () => {

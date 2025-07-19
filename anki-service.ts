@@ -1,6 +1,7 @@
-import { YankiConnect } from 'yanki-connect';
-import { Flashcard, HtmlFlashcard, NoteType } from './flashcard';
-import { OBSIDIAN_VAULT_TAG_PREFIX, OBSIDIAN_SYNC_TAG, OBSIDIAN_FILE_TAG_PREFIX } from './constants';
+import {YankiConnect} from 'yanki-connect';
+import {Flashcard, HtmlFlashcard, NoteType} from './flashcard';
+import {OBSIDIAN_FILE_TAG_PREFIX, OBSIDIAN_SYNC_TAG, OBSIDIAN_VAULT_TAG_PREFIX} from './constants';
+
 const TurndownService = require('turndown');
 
 // Turndown service interface for better typing
@@ -152,7 +153,6 @@ export class YankiConnectAnkiService implements AnkiService {
 		return notes.filter(note => 
 			note !== null && note !== undefined && note.noteId !== undefined
 		).map(note => {
-			const firstCardId = note.cards && note.cards[0];
 			const deckNames = new Set((note.cards ?? []).map(cardId => cardDecks[cardId]));
 			return {
 				noteId: note.noteId,

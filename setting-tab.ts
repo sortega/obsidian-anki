@@ -1,5 +1,5 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
-import { DEFAULT_DECK } from './constants';
+import {App, PluginSettingTab, Setting} from 'obsidian';
+import {DEFAULT_DECK} from './constants';
 import type ObsidianAnkiPlugin from './main';
 
 export class ObsidianAnkiSettingTab extends PluginSettingTab {

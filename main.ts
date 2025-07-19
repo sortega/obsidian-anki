@@ -1,11 +1,11 @@
-import { App, MarkdownView, Notice, Plugin, MarkdownPostProcessorContext } from 'obsidian';
-import { AnkiService, YankiConnectAnkiService } from './anki-service';
-import { NoteType } from './flashcard';
-import { FlashcardInsertModal, FlashcardInsertModalProps } from './flashcard-insert-modal';
-import { FlashcardCodeBlockProcessor } from './flashcard-renderer';
-import { SyncProgressModal, SyncConfirmationModal, SyncAnalysis } from './sync-analysis';
-import { DEFAULT_NOTE_TYPE, DEFAULT_DECK, DEFAULT_IGNORED_TAGS } from './constants';
-import { ObsidianAnkiSettingTab } from './setting-tab';
+import {MarkdownPostProcessorContext, MarkdownView, Notice, Plugin} from 'obsidian';
+import {AnkiService, YankiConnectAnkiService} from './anki-service';
+import {NoteType} from './flashcard';
+import {FlashcardInsertModal, FlashcardInsertModalProps} from './flashcard-insert-modal';
+import {FlashcardCodeBlockProcessor} from './flashcard-renderer';
+import {SyncAnalysis, SyncConfirmationModal, SyncProgressModal} from './sync-analysis';
+import {DEFAULT_DECK, DEFAULT_IGNORED_TAGS, DEFAULT_NOTE_TYPE} from './constants';
+import {ObsidianAnkiSettingTab} from './setting-tab';
 
 interface PluginSettings {
 	lastUsedNoteType: string;
@@ -39,7 +39,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		this.flashcardProcessor = new FlashcardCodeBlockProcessor(this.app);
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (_evt: MouseEvent) => {
 			await this.connectToAnki('Sync operation');
 			if (this.availableDecks.length === 0) {
 				new Notice("Cannot connect to Anki");
@@ -50,7 +50,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
 		// Add ribbon icon for inserting flashcards
-		this.insertFlashcardButton = this.addRibbonIcon('file-plus', 'Insert Flashcard', (evt: MouseEvent) => {
+		this.insertFlashcardButton = this.addRibbonIcon('file-plus', 'Insert Flashcard', (_evt: MouseEvent) => {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (activeView) {
 				const modalProps: FlashcardInsertModalProps = {
@@ -109,7 +109,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			id: 'insert-flashcard',
 			name: 'Insert flashcard',
 			hotkeys: [{ modifiers: ['Mod', 'Ctrl'], key: 'f' }],
-			editorCallback: (editor, view) => {
+			editorCallback: (_editor, _view) => {
 				const modalProps: FlashcardInsertModalProps = {
 					availableNoteTypes: this.settings.availableNoteTypes,
 					lastUsedNoteType: this.settings.lastUsedNoteType,
@@ -147,7 +147,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			
 			this.availableDecks = deckNames;
 
-			// Check if current default deck is still valid, if not reset to DEFAULT_DECK
+			// Check if the current default deck is still valid, if not reset to DEFAULT_DECK
 			if (deckNames.length > 0 && !deckNames.includes(this.settings.defaultDeck)) {
 				console.warn(`Default deck '${this.settings.defaultDeck}' not found in Anki. Resetting to '${DEFAULT_DECK}'.`);
 				this.settings.defaultDeck = deckNames.includes(DEFAULT_DECK) ? DEFAULT_DECK : deckNames[0];
@@ -164,7 +164,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			this.updateInsertFlashcardButtonState();
 		} catch (error) {
 			this.availableDecks = [];
-			// Note: availableNoteTypes remain in settings from last successful connection
+			// Note: availableNoteTypes remain in settings from the last successful connection
 			console.log(`[${context}] Anki connection failed:`, error);
 			this.ankiStatusBar.setText('🔴 Anki disconnected');
 			

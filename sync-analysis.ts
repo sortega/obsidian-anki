@@ -1,12 +1,10 @@
-import { App, Modal, Notice, CachedMetadata, TFile, MarkdownView, FrontMatterCache } from 'obsidian';
-import { AnkiService, AnkiNote } from './anki-service';
-import { NoteType } from './flashcard';
-import { Flashcard, HtmlFlashcard, InvalidFlashcard, FlashcardBlock, BlockFlashcardParser } from './flashcard';
-import { MarkdownService } from './markdown-service';
-import { FlashcardRenderer } from './flashcard-renderer';
-import { SyncExecutionModal } from './sync-execution';
-import { NoteMetadata, parseNoteMetadata } from './note-metadata';
-import { ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
+import {App, CachedMetadata, MarkdownView, Modal, Notice, TFile} from 'obsidian';
+import {AnkiNote, AnkiService} from './anki-service';
+import {BlockFlashcardParser, Flashcard, FlashcardBlock, InvalidFlashcard, NoteType} from './flashcard';
+import {MarkdownService} from './markdown-service';
+import {FlashcardRenderer} from './flashcard-renderer';
+import {SyncExecutionModal} from './sync-execution';
+import {NoteMetadata, parseNoteMetadata} from './note-metadata';
 
 export interface SyncAnalysis {
 	totalFiles: number;

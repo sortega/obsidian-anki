@@ -1,6 +1,6 @@
-import { BlockFlashcardParser, Flashcard, InvalidFlashcard, NoteType } from '../flashcard';
-import { NoteMetadata } from '../note-metadata';
-import { DEFAULT_DECK, DEFAULT_NOTE_TYPE, ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from '../constants';
+import {BlockFlashcardParser, NoteType} from '../flashcard';
+import {NoteMetadata} from '../note-metadata';
+import {ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY, DEFAULT_DECK, DEFAULT_NOTE_TYPE} from '../constants';
 
 describe('BlockFlashcardParser', () => {
 	const mockNoteTypes: NoteType[] = [

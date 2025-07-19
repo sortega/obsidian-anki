@@ -3,8 +3,7 @@ jest.mock('yanki-connect', () => ({
   YankiConnect: jest.fn().mockImplementation(() => ({})),
 }), { virtual: true });
 
-import { YankiConnectAnkiService, AnkiNote } from '../anki-service';
-import { Flashcard } from '../flashcard';
+import {AnkiNote, YankiConnectAnkiService} from '../anki-service';
 
 describe('YankiConnectAnkiService', () => {
   let service: YankiConnectAnkiService;

@@ -1,5 +1,5 @@
-import { App, MarkdownView, SuggestModal } from 'obsidian';
-import { NoteType } from './flashcard';
+import {App, MarkdownView, SuggestModal} from 'obsidian';
+import {NoteType} from './flashcard';
 
 export interface FlashcardInsertModalProps {
 	availableNoteTypes: NoteType[];
@@ -44,7 +44,7 @@ export class FlashcardInsertModal extends SuggestModal<string> {
 		}
 	}
 
-	async onChooseSuggestion(noteType: string, evt: MouseEvent | KeyboardEvent) {
+	async onChooseSuggestion(noteType: string, _evt: MouseEvent | KeyboardEvent) {
 		// Save as last used note type
 		await this.props.onNoteTypeSelected(noteType);
 

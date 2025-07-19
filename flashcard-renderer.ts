@@ -1,12 +1,12 @@
-import { MarkdownRenderChild, MarkdownPostProcessorContext, App, MarkdownView } from 'obsidian';
-import { Flashcard, HtmlFlashcard, InvalidFlashcard, BlockFlashcardParser, NoteType } from './flashcard';
-import { MarkdownService } from './markdown-service';
-import { NoteMetadata, parseNoteMetadata } from './note-metadata';
+import {App, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView} from 'obsidian';
+import {BlockFlashcardParser, HtmlFlashcard, NoteType} from './flashcard';
+import {MarkdownService} from './markdown-service';
+import {parseNoteMetadata} from './note-metadata';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
-	private htmlFlashcard: HtmlFlashcard;
+	private readonly htmlFlashcard: HtmlFlashcard;
 	private app: App;
-	private defaultDeck: string;
+	private readonly defaultDeck: string;
 
 	constructor(containerEl: HTMLElement, htmlFlashcard: HtmlFlashcard, defaultDeck: string, app: App) {
 		super(containerEl);
@@ -56,12 +56,12 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 				cls: 'flashcard-warning-container'
 			});
 			
-			const warningIcon = warningContainer.createEl('span', { 
+			warningContainer.createEl('span', {
 				cls: 'flashcard-warning-icon',
 				text: 'ⓘ'
 			});
 			
-			const warningTitle = warningContainer.createEl('span', { 
+			warningContainer.createEl('span', {
 				cls: 'flashcard-warning-title',
 				text: 'Warnings'
 			});
@@ -82,7 +82,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			const fieldContainer = content.createEl('div', { cls: 'flashcard-field' });
 			
 			// Field label
-			const label = fieldContainer.createEl('div', { 
+			fieldContainer.createEl('div', {
 				cls: 'flashcard-field-label',
 				text: `${this.capitalizeFirst(fieldName)}:`
 			});
@@ -100,11 +100,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			// Left side: tags
 			const tagsContainer = footer.createEl('div', { cls: 'flashcard-tags-container' });
 			if (visibleTags.length > 0) {
-				const tagsLabel = tagsContainer.createEl('span', { 
+				tagsContainer.createEl('span', {
 					text: 'Tags: ',
 					cls: 'flashcard-tags-label'
 				});
-				const tagsContent = tagsContainer.createEl('span', { 
+				tagsContainer.createEl('span', {
 					text: visibleTags.join(', '),
 					cls: 'flashcard-tags-content'
 				});
@@ -113,11 +113,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			// Right side: deck
 			if (this.htmlFlashcard.deck !== this.defaultDeck) {
 				const deckContainer = footer.createEl('div', { cls: 'flashcard-deck-container' });
-				const deckLabel = deckContainer.createEl('span', { 
+				deckContainer.createEl('span', {
 					text: 'Deck: ',
 					cls: 'flashcard-deck-label'
 				});
-				const deckContent = deckContainer.createEl('span', { 
+				deckContainer.createEl('span', {
 					text: this.htmlFlashcard.deck,
 					cls: 'flashcard-deck-content'
 				});
@@ -202,7 +202,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 }
 
 export class FlashcardCodeBlockProcessor {
-	private app: App;
+	private readonly app: App;
 
 	constructor(app: App) {
 		this.app = app;
@@ -236,12 +236,12 @@ export class FlashcardCodeBlockProcessor {
 				cls: 'flashcard-error-container'
 			});
 			
-			const errorIcon = errorContainer.createEl('span', { 
+			errorContainer.createEl('span', {
 				cls: 'flashcard-error-icon',
 				text: 'ⓘ'
 			});
 			
-			const errorTitle = errorContainer.createEl('span', { 
+			errorContainer.createEl('span', {
 				cls: 'flashcard-error-title',
 				text: 'Invalid Flashcard'
 			});

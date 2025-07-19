@@ -1,9 +1,9 @@
-import { App, Modal, Notice, TFile, MarkdownView } from 'obsidian';
-import { AnkiService, AnkiNote } from './anki-service';
-import { Flashcard, HtmlFlashcard } from './flashcard';
-import { SyncAnalysis } from './sync-analysis';
-import { MarkdownService } from './markdown-service';
-import { DEFAULT_IMPORT_FILE } from './constants';
+import {App, MarkdownView, Modal, Notice, TFile} from 'obsidian';
+import {AnkiNote, AnkiService} from './anki-service';
+import {Flashcard} from './flashcard';
+import {SyncAnalysis} from './sync-analysis';
+import {MarkdownService} from './markdown-service';
+import {DEFAULT_IMPORT_FILE} from './constants';
 import * as yaml from 'js-yaml';
 
 export interface OperationResult {

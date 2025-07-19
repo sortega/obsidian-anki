@@ -1,6 +1,6 @@
 import * as yaml from 'js-yaml';
-import { DEFAULT_NOTE_TYPE, DEFAULT_DECK, METADATA_FIELDS, ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
-import { NoteMetadata } from './note-metadata';
+import {ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY, DEFAULT_NOTE_TYPE, METADATA_FIELDS} from './constants';
+import {NoteMetadata} from './note-metadata';
 
 // Note type definition for flashcard templates
 export interface NoteType {
@@ -148,7 +148,7 @@ export class BlockFlashcardParser {
 			
 			// Check for warnings if availableNoteTypes is provided
 			if (availableNoteTypes) {
-				// Check for unknown note type
+				// Check for unknown note types
 				const noteType = availableNoteTypes.find(nt => nt.name === flashcard.noteType);
 				if (!noteType) {
 					flashcard.warnings.push(`Unknown note type: '${flashcard.noteType}'. Available note types: ${availableNoteTypes.map(nt => nt.name).join(', ')}`);
@@ -199,7 +199,7 @@ export class BlockFlashcardParser {
 	}
 
 	private static parseDeck(data: Record<string, unknown>, noteMetadata: NoteMetadata, defaultDeck: string): string {
-		// Flashcard-level Deck field takes highest precedence
+		// Flashcard-level Deck field takes the highest precedence
 		if ('Deck' in data && typeof data.Deck === 'string' && data.Deck.trim().length > 0) {
 			return data.Deck.trim();
 		}

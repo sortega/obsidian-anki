@@ -1,4 +1,4 @@
-import { ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY } from './constants';
+import {ANKI_DECK_PROPERTY, ANKI_TAGS_PROPERTY} from './constants';
 
 // Note metadata interface for front-matter processing
 export interface NoteMetadata {
