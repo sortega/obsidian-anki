@@ -1,5 +1,5 @@
 import {App, MarkdownView, Modal, Notice, TFile} from 'obsidian';
-import {AnkiNote, AnkiService} from './anki-service';
+import {AnkiNote, AnkiService, MediaItem} from './anki-service';
 import {Flashcard} from './flashcard';
 import {SyncAnalysis} from './sync-analysis';
 import {MarkdownService} from './markdown-service';
@@ -14,10 +14,18 @@ export interface OperationResult {
 	operation: 'create' | 'update' | 'delete';
 }
 
+export interface MediaOperationResult {
+	mediaItem: MediaItem;
+	success: boolean;
+	error?: string;
+	ankiFilename?: string;
+}
+
 export interface SyncResults {
 	totalOperations: number;
 	successfulOperations: OperationResult[];
 	failedOperations: OperationResult[];
+	mediaOperations: MediaOperationResult[];
 	isPartialSuccess: boolean;
 	startTime: Date;
 	endTime: Date;
@@ -26,7 +34,6 @@ export interface SyncResults {
 export class SyncExecutionModal extends Modal {
 	private analysis: SyncAnalysis;
 	private ankiService: AnkiService;
-	private defaultDeck: string;
 	private vaultName: string;
 	private orphanedCardAction: 'delete' | 'import';
 	private progressBar: HTMLElement;
@@ -36,11 +43,10 @@ export class SyncExecutionModal extends Modal {
 	private failureCountText: HTMLElement;
 	private results: SyncResults;
 
-	constructor(app: App, analysis: SyncAnalysis, ankiService: AnkiService, defaultDeck: string, vaultName: string, orphanedCardAction: 'delete' | 'import' = 'delete') {
+	constructor(app: App, analysis: SyncAnalysis, ankiService: AnkiService, vaultName: string, orphanedCardAction: "delete" | "import" = 'delete') {
 		super(app);
 		this.analysis = analysis;
 		this.ankiService = ankiService;
-		this.defaultDeck = defaultDeck;
 		this.vaultName = vaultName;
 		this.orphanedCardAction = orphanedCardAction;
 	}
@@ -96,13 +102,15 @@ export class SyncExecutionModal extends Modal {
 			let completed = 0;
 			const totalOperations = this.analysis.newFlashcards.length + 
 								   this.analysis.changedFlashcards.length + 
-								   this.analysis.deletedAnkiNotes.length;
+								   this.analysis.deletedAnkiNotes.length +
+								   this.analysis.unsyncedMediaItems.length;
 
 			// Initialize results tracking
 			this.results = {
 				totalOperations,
 				successfulOperations: [],
 				failedOperations: [],
+				mediaOperations: [],
 				isPartialSuccess: false,
 				startTime: new Date(),
 				endTime: new Date()
@@ -118,7 +126,7 @@ export class SyncExecutionModal extends Modal {
 					
 					// Convert markdown fields to HTML
 					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
-					const noteId = await this.ankiService.createNote(htmlFlashcard);
+					const noteId = await this.ankiService.createNote(htmlFlashcard, this.analysis.mediaItems);
 					createdNoteIds.push({ flashcard, noteId });
 					
 					// Track successful operation
@@ -155,7 +163,7 @@ export class SyncExecutionModal extends Modal {
 					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
 					
 					// Update note content
-					await this.ankiService.updateNote(ankiNote.noteId, htmlFlashcard);
+					await this.ankiService.updateNote(ankiNote.noteId, htmlFlashcard, this.analysis.mediaItems);
 					
 					// Check if deck has changed and move card if needed
 					if (ankiNote.deckNames.size > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
@@ -199,25 +207,34 @@ export class SyncExecutionModal extends Modal {
 				completed += this.analysis.deletedAnkiNotes.length;
 			}
 
+			// Sync media files as the final step
+			if (this.analysis.unsyncedMediaItems.length > 0) {
+				await this.syncMediaFiles(completed, totalOperations);
+				completed += this.analysis.unsyncedMediaItems.length;
+			}
+
 			// Update Obsidian files with new ankiId values
 			if (createdNoteIds.length > 0) {
-				this.updateProgress(0.9, 'Updating Obsidian files with Anki IDs...');
+				this.updateProgress(0.95, 'Updating Obsidian files with Anki IDs...');
 				await this.updateObsidianFiles(createdNoteIds);
 			}
 
 			// Finalize results
 			this.results.endTime = new Date();
-			this.results.isPartialSuccess = this.results.failedOperations.length > 0;
+			const mediaFailures = this.results.mediaOperations.filter(op => !op.success);
+			this.results.isPartialSuccess = this.results.failedOperations.length > 0 || mediaFailures.length > 0;
 			
 			this.updateProgress(1, 'Sync complete!');
 			
 			// Show results based on success/failure
-			if (this.results.failedOperations.length === 0) {
+			if (this.results.failedOperations.length === 0 && mediaFailures.length === 0) {
 				// Complete success
+				const mediaCount = this.results.mediaOperations.filter(op => op.success).length;
 				const successMessage = `Sync completed successfully!\n` +
 					`• Created: ${this.results.successfulOperations.filter(op => op.operation === 'create').length} flashcards\n` +
 					`• Updated: ${this.results.successfulOperations.filter(op => op.operation === 'update').length} flashcards\n` +
-					`• Deleted: ${this.results.successfulOperations.filter(op => op.operation === 'delete').length} flashcards`;
+					`• Deleted: ${this.results.successfulOperations.filter(op => op.operation === 'delete').length} flashcards` +
+					(mediaCount > 0 ? `\n• Media: ${mediaCount} files synced` : '');
 				
 				new Notice(successMessage);
 				setTimeout(() => this.close(), 2000);
@@ -344,6 +361,39 @@ export class SyncExecutionModal extends Modal {
 				this.updateCounters();
 				
 				console.error(`❌ Failed to import orphaned note ${orphanedNote.noteId}:`, error);
+			}
+		}
+	}
+
+	private async syncMediaFiles(completed: number, totalOperations: number) {
+		this.updateProgress(completed / totalOperations, `Syncing ${this.analysis.unsyncedMediaItems.length} media files...`);
+		
+		for (let i = 0; i < this.analysis.unsyncedMediaItems.length; i++) {
+			const mediaItem = this.analysis.unsyncedMediaItems[i];
+			const progressPercent = completed + i;
+			this.updateProgress(progressPercent / totalOperations, `Syncing media: ${mediaItem.sourcePath}`);
+
+			try {
+				// Store media file in Anki - the service handles filename generation internally
+				const ankiFilename = await this.ankiService.storeMediaFile(mediaItem);
+				
+				// Track successful operation
+				this.results.mediaOperations.push({
+					mediaItem,
+					success: true,
+					ankiFilename
+				});
+				
+				console.log(`✅ Synced media file: ${mediaItem.sourcePath} → ${ankiFilename}`);
+			} catch (error) {
+				// Track failed operation
+				this.results.mediaOperations.push({
+					mediaItem,
+					success: false,
+					error: error instanceof Error ? error.message : String(error)
+				});
+				
+				console.error(`❌ Failed to sync media file ${mediaItem.sourcePath}:`, error);
 			}
 		}
 	}
@@ -562,6 +612,18 @@ export class SyncExecutionModal extends Modal {
 			this.createResultSection(summarySection, 'Failed Operations', this.results.failedOperations, 'failure');
 		}
 
+		// Media operations sections
+		const successfulMediaOps = this.results.mediaOperations.filter(op => op.success);
+		const failedMediaOps = this.results.mediaOperations.filter(op => !op.success);
+
+		if (successfulMediaOps.length > 0) {
+			this.createMediaResultSection(summarySection, 'Successful Media Operations', successfulMediaOps, 'success');
+		}
+
+		if (failedMediaOps.length > 0) {
+			this.createMediaResultSection(summarySection, 'Failed Media Operations', failedMediaOps, 'failure');
+		}
+
 		// Action buttons
 		const buttonContainer = contentEl.createEl('div', { cls: 'sync-button-container' });
 		
@@ -600,6 +662,51 @@ export class SyncExecutionModal extends Modal {
 						this.createFileLink(locationDiv, operation.flashcard.sourcePath, operation.flashcard.lineStart);
 					} else {
 						locationDiv.createEl('span', { text: `Anki Note ${operation.noteId}` });
+					}
+
+					if (!operation.success && operation.error) {
+						item.createEl('div', { 
+							cls: 'sync-result-error',
+							text: operation.error
+						});
+					}
+				}
+
+				if (operations.length > 10) {
+					content.createEl('div', { 
+						cls: 'sync-more-items',
+						text: `... and ${operations.length - 10} more`
+					});
+				}
+			}
+		});
+	}
+
+	private createMediaResultSection(container: HTMLElement, title: string, operations: MediaOperationResult[], type: 'success' | 'failure') {
+		const details = container.createEl('details', { cls: `sync-result-section sync-result-${type}` });
+		const summary = details.createEl('summary', { cls: 'sync-result-summary' });
+		
+		summary.createEl('span', { 
+			cls: 'sync-result-title',
+			text: `${title} (${operations.length})`
+		});
+
+		// Lazy load content when expanded
+		details.addEventListener('toggle', () => {
+			if (details.open && !details.querySelector('.sync-result-content')) {
+				const content = details.createEl('div', { cls: 'sync-result-content' });
+				
+				for (const operation of operations.slice(0, 10)) {
+					const item = content.createEl('div', { cls: 'sync-result-item' });
+					
+					const locationDiv = item.createEl('div', { cls: 'sync-result-location' });
+					locationDiv.createEl('span', { text: `📁 ${operation.mediaItem.sourcePath}` });
+					
+					if (operation.success && operation.ankiFilename) {
+						item.createEl('div', { 
+							cls: 'sync-result-anki-filename',
+							text: `→ ${operation.ankiFilename}`
+						});
 					}
 
 					if (!operation.success && operation.error) {

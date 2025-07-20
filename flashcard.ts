@@ -30,7 +30,7 @@ export interface HtmlFlashcard extends FlashcardBlock {
 	noteType: string;
 	ankiId?: number;
 	tags: string[];
-	htmlFields: Record<string, string>;
+	htmlFields: Record<string, Document>;
 	warnings: string[];
 	deck: string;
 }

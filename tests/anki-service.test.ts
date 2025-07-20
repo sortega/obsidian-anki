@@ -137,7 +137,7 @@ describe('YankiConnectAnkiService', () => {
       const result = service.convertOrphanedNoteToFlashcard(ankiNote);
 
       expect(result.contentFields).toEqual({
-        Front: '<malformed><tag>Problematic HTML</malformed>', // Original HTML preserved
+        Front: '<malformed><tag>Problematic HTML</tag></malformed>', // HTML auto-corrected by DOMParser
         Back: 'Normal content', // Successfully converted
       });
 

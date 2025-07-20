@@ -29,9 +29,11 @@ export class MarkdownService {
 
 	// Convert Flashcard with Markdown fields to HtmlFlashcard with HTML fields
 	static toHtmlFlashcard(flashcard: Flashcard, vaultName: string): HtmlFlashcard {
-		const htmlFields: Record<string, string> = {};
+		const htmlFields: Record<string, Document> = {};
+		const parser = new DOMParser();
 		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
-			htmlFields[fieldName] = this.renderToHtml(fieldValue);
+			const htmlString = this.renderToHtml(fieldValue);
+			htmlFields[fieldName] = parser.parseFromString(htmlString, 'text/html');
 		}
 		
 		const tags = [

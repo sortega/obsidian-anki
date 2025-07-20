@@ -145,6 +145,12 @@ Click the sync button in the ribbon to synchronize your flashcards with Anki. Th
 4. Apply changes after confirmation
 5. Update Obsidian files with new Anki IDs
 
+Images in your notes are synchronized with the following limitations:
+
+- Only local media, no external links nor `data:` links
+- Only images
+- Only Markdown (`![alt](path/to/image)`) or HTML images are synced. The Obsidian image syntax (`![[image]]`) is not supported
+
 ### Obsidian Backlinks
 
 The plugin doesn't automatically create backlinks from Anki to Obsidian. However, you can modify you note

@@ -35,7 +35,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			containerEl.addClass('flashcard-warning');
 		}
 
-		// Header with note type
+		// Header with the note type
 		const header = containerEl.createEl('div', { cls: 'flashcard-header' });
 		header.createEl('span', { 
 			text: `Note Type: ${this.htmlFlashcard.noteType}`,
@@ -74,7 +74,8 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		const content = containerEl.createEl('div', { cls: 'flashcard-content' });
 
 		// Render non-empty HTML fields
-		for (const [fieldName, htmlContent] of Object.entries(this.htmlFlashcard.htmlFields)) {
+		for (const [fieldName, doc] of Object.entries(this.htmlFlashcard.htmlFields)) {
+			const htmlContent = doc.body.innerHTML;
 			if (!htmlContent.trim()) {
 				continue;
 			}
@@ -87,9 +88,9 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 				text: `${this.capitalizeFirst(fieldName)}:`
 			});
 
-			// Field content - use HTML directly
+			// Field content - use HTML directly with image src resolution
 			const fieldContentEl = fieldContainer.createEl('div', { cls: 'flashcard-field-content' });
-			fieldContentEl.innerHTML = htmlContent;
+			fieldContentEl.innerHTML = this.resolveImageSources(doc);
 		}
 
 		// Footer with tags and deck
@@ -127,6 +128,39 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 
 	private capitalizeFirst(str: string): string {
 		return str.charAt(0).toUpperCase() + str.slice(1);
+	}
+
+	private resolveImageSources(doc: Document): string {
+		try {
+			// Clone the document to avoid modifying the original
+			const clonedDoc = doc.cloneNode(true) as Document;
+			const images = clonedDoc.querySelectorAll('img');
+			
+			images.forEach(img => {
+				const src = img.getAttribute('src');
+				if (src && this.isRelativePath(src)) {
+					// Resolve relative path to absolute vault path
+					const absolutePath = this.app.vault.adapter.getResourcePath(src);
+					img.setAttribute('src', absolutePath);
+				}
+			});
+			
+			// Return the modified HTML
+			return clonedDoc.body.innerHTML;
+		} catch (error) {
+			console.warn('Failed to resolve image sources:', error);
+			// Return original content if parsing fails
+			return doc.body.innerHTML;
+		}
+	}
+
+	private isRelativePath(src: string): boolean {
+		// Check if it's a relative path (not absolute URL or data URL)
+		return !src.startsWith('http://') && 
+			   !src.startsWith('https://') && 
+			   !src.startsWith('data:') && 
+			   !src.startsWith('file://') &&
+			   !src.startsWith('/');
 	}
 
 	private setupHoverPopup(triggerElement: HTMLElement, message: string, type: 'warning' | 'error') {

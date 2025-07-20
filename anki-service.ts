@@ -1,6 +1,7 @@
 import {YankiConnect} from 'yanki-connect';
 import {Flashcard, HtmlFlashcard, NoteType} from './flashcard';
 import {OBSIDIAN_FILE_TAG_PREFIX, OBSIDIAN_SYNC_TAG, OBSIDIAN_VAULT_TAG_PREFIX} from './constants';
+import * as CryptoJS from 'crypto-js';
 
 const TurndownService = require('turndown');
 
@@ -25,8 +26,14 @@ export interface AnkiNote {
 	deckNames: Set<string>;  // Multi-card notes might have cards in different decks
 }
 
+// Media item for syncing media files to Anki
+export interface MediaItem {
+	sourcePath: string;
+	contents: Uint8Array;
+}
 
-// Port - AnkiService interface defining operations needed by the application
+
+// AnkiService interface defining operations needed by the application
 export interface AnkiService {
 	/**
 	 * Get all available note types from Anki with their field information
@@ -51,12 +58,12 @@ export interface AnkiService {
 	/**
 	 * Create a new note in Anki from a flashcard
 	 */
-	createNote(flashcard: HtmlFlashcard): Promise<number>;
+	createNote(flashcard: HtmlFlashcard, mediaItems: MediaItem[]): Promise<number>;
 	
 	/**
 	 * Update an existing note in Anki with new flashcard data
 	 */
-	updateNote(ankiId: number, flashcard: HtmlFlashcard): Promise<void>;
+	updateNote(ankiId: number, flashcard: HtmlFlashcard, mediaItems: MediaItem[]): Promise<void>;
 	
 	/**
 	 * Delete notes from Anki by their IDs
@@ -81,6 +88,16 @@ export interface AnkiService {
 
 	filterIgnoredTags(tags: string[]): string[];
 	setIgnoredTags(ignoredTags: string[]): void;
+	
+	/**
+	 * Store a media file in Anki using the relative path from Obsidian vault
+	 */
+	storeMediaFile(mediaItem: MediaItem): Promise<string>;
+	
+	/**
+	 * Check if a media file already exists in Anki
+	 */
+	hasMediaFile(mediaItem: MediaItem): Promise<boolean>;
 }
 
 // Adapter - YankiConnect implementation of AnkiService
@@ -165,12 +182,21 @@ export class YankiConnectAnkiService implements AnkiService {
 		});
 	}
 	
-	async createNote(flashcard: HtmlFlashcard): Promise<number> {
+	async createNote(flashcard: HtmlFlashcard, mediaItems: MediaItem[]): Promise<number> {
+		// Transform HTML fields to use Anki media filenames
+		const transformedFields: Record<string, string> = {};
+		for (const [fieldName, doc] of Object.entries(flashcard.htmlFields)) {
+			// Clone the document to avoid modifying the original
+			const clonedDoc = doc.cloneNode(true) as Document;
+			this.transformDocumentForAnki(clonedDoc, mediaItems);
+			transformedFields[fieldName] = clonedDoc.body.innerHTML;
+		}
+
 		const noteId = await this.yankiConnect.note.addNote({
 			note: {
 				deckName: flashcard.deck,
 				modelName: flashcard.noteType,
-				fields: flashcard.htmlFields,
+				fields: transformedFields,
 				tags: flashcard.tags
 			}
 		});
@@ -182,11 +208,20 @@ export class YankiConnectAnkiService implements AnkiService {
 		return noteId;
 	}
 	
-	async updateNote(ankiId: number, flashcard: HtmlFlashcard): Promise<void> {
+	async updateNote(ankiId: number, flashcard: HtmlFlashcard, mediaItems: MediaItem[]): Promise<void> {
+		// Transform HTML fields to use Anki media filenames
+		const transformedFields: Record<string, string> = {};
+		for (const [fieldName, doc] of Object.entries(flashcard.htmlFields)) {
+			// Clone the document to avoid modifying the original
+			const clonedDoc = doc.cloneNode(true) as Document;
+			this.transformDocumentForAnki(clonedDoc, mediaItems);
+			transformedFields[fieldName] = clonedDoc.body.innerHTML;
+		}
+
 		await this.yankiConnect.note.updateNote({
 			note: {
 				id: ankiId,
-				fields: flashcard.htmlFields,
+				fields: transformedFields,
 				tags: flashcard.tags
 			}
 		});
@@ -238,13 +273,19 @@ export class YankiConnectAnkiService implements AnkiService {
 
 	convertOrphanedNoteToFlashcard(ankiNote: AnkiNote): Flashcard {
 		const contentFields: Record<string, string> = {};
+		const parser = new DOMParser();
 		
-		// Add field content (convert HTML to markdown)
+		// Add field content (convert HTML to markdown, transforming media paths first)
 		for (const [fieldName, fieldData] of Object.entries(ankiNote.htmlFields || {})) {
 			let fieldValue = fieldData.value || '';
 			
-			// Use turndown to convert HTML to markdown
 			if (fieldValue.trim()) {
+				// Parse HTML into Document and transform Anki media filenames back to vault paths
+				const doc = parser.parseFromString(fieldValue, 'text/html');
+				this.transformDocumentFromAnki(doc);
+				fieldValue = doc.body.innerHTML;
+				
+				// Use turndown to convert HTML to markdown
 				try {
 					fieldValue = this.turndownService.turndown(fieldValue).trim();
 				} catch (error) {
@@ -271,12 +312,16 @@ export class YankiConnectAnkiService implements AnkiService {
 	}
 
 	toHtmlFlashcard(ankiNote: AnkiNote): HtmlFlashcard {
-		const htmlFields: Record<string, string> = {};
+		const htmlFields: Record<string, Document> = {};
+		const parser = new DOMParser();
 		
-		// Convert Anki htmlFields to htmlFields (keep HTML for display)
+		// Convert Anki htmlFields to Document objects and transform media paths back to vault paths
 		for (const [fieldName, fieldData] of Object.entries(ankiNote.htmlFields || {})) {
-			// Keep HTML tags since FlashcardRenderer can handle them properly
-			htmlFields[fieldName] = fieldData.value || '';
+			const htmlContent = fieldData.value || '';
+			const doc = parser.parseFromString(htmlContent, 'text/html');
+			// Transform Anki media filenames back to vault paths for display
+			this.transformDocumentFromAnki(doc);
+			htmlFields[fieldName] = doc;
 		}
 		
 		return {
@@ -295,6 +340,127 @@ export class YankiConnectAnkiService implements AnkiService {
 	
 	setIgnoredTags(ignoredTags: string[]): void {
 		this.ignoredTags = ignoredTags;
+	}
+
+	async storeMediaFile(mediaItem: MediaItem): Promise<string> {
+		const ankiFilename = this.generateAnkiMediaFilename(mediaItem);
+		const base64Data = btoa(String.fromCharCode(...mediaItem.contents));
+		return await this.yankiConnect.media.storeMediaFile({
+			filename: ankiFilename,
+			data: base64Data
+		});
+	}
+
+	async hasMediaFile(mediaItem: MediaItem): Promise<boolean> {
+		try {
+			const ankiFilename = this.generateAnkiMediaFilename(mediaItem);
+			const encodedContents = await this.yankiConnect.media.retrieveMediaFile({
+				filename: ankiFilename
+			});
+			return encodedContents === btoa(String.fromCharCode(...mediaItem.contents));
+		} catch (error) {
+			console.warn(`Failed to check if media file exists ${mediaItem.sourcePath}:`, error);
+			return false;
+		}
+	}
+
+	/**
+	 * Generate Anki-compatible filename for media file
+	 * Format: obsidian-synced-${base64EncodedPath}-${contentMd5Hash}.${extension}
+	 */
+	private generateAnkiMediaFilename(mediaItem: MediaItem): string {
+		// Extract file extension
+		const lastDotIndex = mediaItem.sourcePath.lastIndexOf('.');
+		const extension = lastDotIndex !== -1 ? mediaItem.sourcePath.substring(lastDotIndex + 1) : '';
+		
+		// Base64 encode the path for safe filename usage
+		const encodedPath = btoa(mediaItem.sourcePath);
+		
+		// Generate MD5 hash of the file contents
+		// Convert Uint8Array to WordArray for CryptoJS
+		const wordArray = CryptoJS.lib.WordArray.create(Array.from(mediaItem.contents));
+		const contentHash = CryptoJS.MD5(wordArray).toString();
+		
+		// Construct the filename
+		return `obsidian-synced-${encodedPath}-${contentHash}${extension ? '.' + extension : ''}`;
+	}
+
+	/**
+	 * Extract the original source path from an Anki media filename
+	 * Reverses the mangling done by generateAnkiMediaFilename
+	 */
+	private extractSourcePathFromAnkiFilename(ankiFilename: string): string | null {
+		// Check if it matches our pattern: obsidian-synced-{base64EncodedPath}-{hash}.{ext}
+		// Use non-greedy match for the path part and ensure we match the 32-char hash correctly
+		const match = ankiFilename.match(/^obsidian-synced-(.+?)-([a-f0-9]{32})(\.[^.]+)?$/);
+		if (!match) {
+			return null;
+		}
+		
+		const encodedPath = match[1];
+		// Decode the base64-encoded path
+		try {
+			return atob(encodedPath);
+		} catch (error) {
+			console.warn(`Failed to decode path from Anki filename: ${ankiFilename}`, error);
+			return null;
+		}
+	}
+
+	/**
+	 * Transform HTML Document for Anki by converting vault paths to mangled Anki filenames
+	 */
+	private transformDocumentForAnki(doc: Document, mediaItems: MediaItem[]): void {
+		try {
+			const images = doc.querySelectorAll('img');
+			
+			images.forEach(img => {
+				const src = img.getAttribute('src');
+				if (src && this.isRelativePath(src)) {
+					// Find the corresponding media item
+					const mediaItem = mediaItems.find(item => item.sourcePath === src);
+					if (!mediaItem) {
+						return;
+					}
+					img.setAttribute('src', this.generateAnkiMediaFilename(mediaItem));
+				}
+			});
+		} catch (error) {
+			console.warn('Failed to transform Document for Anki:', error);
+		}
+	}
+
+	/**
+	 * Transform HTML Document from Anki by converting mangled Anki filenames back to vault paths
+	 */
+	private transformDocumentFromAnki(doc: Document): void {
+		try {
+			const images = doc.querySelectorAll('img');
+			
+			images.forEach(img => {
+				const src = img.getAttribute('src');
+				if (src && src.startsWith('obsidian-synced-')) {
+					// Extract original path from Anki filename
+					const originalPath = this.extractSourcePathFromAnkiFilename(src);
+					if (originalPath) {
+						img.setAttribute('src', originalPath);
+					}
+				}
+			});
+		} catch (error) {
+			console.warn('Failed to transform Document from Anki:', error);
+		}
+	}
+
+	/**
+	 * Check if a path is relative (not an absolute URL or data URL)
+	 */
+	private isRelativePath(src: string): boolean {
+		return !src.startsWith('http://') && 
+			   !src.startsWith('https://') && 
+			   !src.startsWith('data:') && 
+			   !src.startsWith('file://') &&
+			   !src.startsWith('/');
 	}
 	
 }

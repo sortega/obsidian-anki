@@ -11,7 +11,9 @@
 ### Syncing
 - Find Anki Notes when their ids are referenced even if the lack the `obsidian-*` tags
 - Better error handling for note type mismatches
-- Sync local images
+- Sync external media (`https://example.com/...`)
+- Sync `data:` links
+- Sync Obsidian image syntax (`![[image]]`)
 - Sync other media (low priority)
 
 ### Import flashcard

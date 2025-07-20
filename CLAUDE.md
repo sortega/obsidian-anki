@@ -29,7 +29,9 @@ The plugin follows hexagonal architecture principles with clean separation betwe
 - **Anki integration**: Uses hexagonal architecture with `AnkiService` interface (port) and `YankiConnectAnkiService` adapter
 - **Domain layer**: Clear separation between `Flashcard` (markdown content) and `HtmlFlashcard` (rendered HTML) types
 - **Type Safety**: `AnkiNote` interface uses `htmlFields` for consistent HTML content handling
-- **Content Rendering**: `MarkdownService` handles markdown-to-HTML conversion with `toHtmlFlashcard()` method
+- **HTML Field Architecture**: `HtmlFlashcard.htmlFields` uses `Record<string, Document>` for reduced parsing overhead and better DOM manipulation
+- **Content Rendering**: `MarkdownService` handles markdown-to-HTML conversion with `toHtmlFlashcard()` method returning Document objects
+- **Media Integration**: Seamless integration of media files with content-based deduplication and safe filename handling
 - **Build system**: esbuild configuration in `esbuild.config.mjs` bundles TypeScript to `main.js`
 
 ## Key Components
@@ -135,10 +137,29 @@ The plugin includes comprehensive flashcard rendering with improved type safety:
 
 The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead, it adds special tags to synced cards that can be used to create links back to your Obsidian notes in Anki card templates.
 
+## Media File Synchronization
+
+The plugin includes comprehensive media file synchronization capabilities:
+
+- **Automatic Media Discovery** - Scans flashcard HTML content for relative image paths
+- **Content-Based Deduplication** - Uses MD5 hashing to avoid syncing duplicate files
+- **Safe Filename Mangling** - Uses base64 encoding for vault paths: `obsidian-synced-${base64EncodedPath}-${contentMd5Hash}.${extension}`
+- **Bidirectional Transformation** - Converts vault paths to Anki filenames during sync and back for display
+- **Progress Tracking** - Shows detailed media sync progress in the sync execution modal
+- **Error Handling** - Graceful handling of media sync failures with detailed error reporting
+
+### Media Sync Process
+1. Extract image references from flashcard HTML content
+2. Load image files as `MediaItem` objects with Uint8Array contents
+3. Generate mangled Anki filenames with base64-encoded paths and MD5 content hashes
+4. Check if media already exists in Anki using content comparison
+5. Upload new/changed media files to Anki collection
+6. Transform HTML content to use Anki media filenames
+7. Reverse transformation for display purposes
+
 ## Current Limitations & TODOs
 
 - No cloze deletion syntax support
-- Missing media file synchronization
 
 ## Development Notes
 
@@ -152,7 +173,18 @@ The plugin doesn't automatically create backlinks from Anki to Obsidian. Instead
 
 ## Testing
 
-- Ensure Anki is running with AnkiConnect addon before testing
+The plugin includes comprehensive test coverage with Jest:
+
+- **Core Functionality Tests** - Flashcard parsing, note metadata, and Anki service operations
+- **Media Pipeline Tests** - Media transformation, extraction, and sync functionality with base64 encoding validation
+- **Renderer Tests** - Flashcard rendering with proper mocking and image source resolution
+- **DOM Manipulation Tests** - Verification that DOM operations preserve encoding correctly
+- **Shared Test Helpers** - Reusable test utilities in `tests/test-helpers.ts` for consistent testing
+
+### Running Tests
+- `npm test` - Run all tests
+- `npm run test:coverage` - Run tests with coverage reporting
+- Ensure Anki is running with AnkiConnect addon before testing integration features
 - Use `npm run dev` for live development with automatic rebuilds
 - Test both connected and disconnected states
 - Verify note types are cached properly in settings
