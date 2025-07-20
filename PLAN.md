@@ -1,5 +1,13 @@
 # Obsidian Anki Plugin Development Plan
 
+## Next release
+- Enable the plugin on the mobile app, but just for editing and rendering flashcards rather than syncing
+- More compact rendering of flashcards
+- Better diff rendering
+- Cloze flashcards special treatment
+- Setting to disable debugging logging
+- Enable beta reviews with https://github.com/TfTHacker/obsidian42-brat
+
 ## Feature Roadmap
 
 ### Cloze flashcards special treatment
@@ -9,7 +17,7 @@
 - Render as highlighted text when cursor is elsewhere
 
 ### Syncing
-- Find Anki Notes when their ids are referenced even if the lack the `obsidian-*` tags
+- Find Anki Notes when their ids are referenced even if they lack the `obsidian-*` tags
 - Better error handling for note type mismatches
 - Sync external media (`https://example.com/...`)
 - Sync `data:` links
@@ -19,11 +27,6 @@
 ### Import flashcard
 - Button, palette action and shortcut to import a flashcard
 - Modal to search for the card and preview what would be inserted
-
-### UI
-- Enable the plugin on the mobile app, but just for editing and rendering flashcards rather than syncing
-- More compact rendering of flashcards
-- Better diff rendering
 
 ## Technical Architecture Decisions
 

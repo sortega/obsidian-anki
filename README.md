@@ -13,10 +13,11 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 - 🔄 **Full Sync**: Complete vault scanning and bidirectional sync with Anki
 - 🔗 **Obsidian Backlinks**: Automatic backlinks from Anki cards to Obsidian notes
 - ⌨️ **Command Palette & Hotkeys**: Access functions via command palette or hotkeys
+- 🖼️ **Media Sync**: Automatic syncing of images and audio files (partially implemented, see limitations below)
 
 ### Coming Soon
 - 🧠 **Cloze Deletion**: Specialized syntax for cloze deletion cards
-- 🖼️ **Media Sync**: Automatic syncing of images and audio files
+- 📱 **Mobile support**: Render flashcards nicely when accessing your vault from mobile. Other features won't be enabled.
 
 ## Installation
 
