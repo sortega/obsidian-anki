@@ -1,4 +1,4 @@
-import {MarkdownPostProcessorContext, MarkdownView, Notice, Plugin} from 'obsidian';
+import {MarkdownPostProcessorContext, MarkdownView, Notice, Platform, Plugin} from 'obsidian';
 import {AnkiService, YankiConnectAnkiService} from './anki-service';
 import {NoteType} from './flashcard';
 import {FlashcardInsertModal, FlashcardInsertModalProps} from './flashcard-insert-modal';
@@ -32,27 +32,37 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Initialize Anki Service
-		this.ankiService = new YankiConnectAnkiService(this.settings.ignoredTags);
+		// Initialize Anki Service (only on desktop)
+		if (!this.isMobile()) {
+			this.ankiService = new YankiConnectAnkiService(this.settings.ignoredTags);
+		}
 
 		// Initialize Flashcard Processor
 		this.flashcardProcessor = new FlashcardCodeBlockProcessor(this.app);
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (_evt: MouseEvent) => {
-			await this.connectToAnki('Sync operation');
-			if (this.availableDecks.length === 0) {
-				new Notice("Cannot connect to Anki");
-				return;
-			}
-			await this.startSyncProcess();
-		});
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		// Desktop-only: Sync to Anki ribbon button
+		if (!this.isMobile()) {
+			const ribbonIconEl = this.addRibbonIcon('star', 'Sync to Anki', async (_evt: MouseEvent) => {
+				await this.connectToAnki('Sync operation');
+				if (this.availableDecks.length === 0) {
+					new Notice("Cannot connect to Anki");
+					return;
+				}
+				await this.startSyncProcess();
+			});
+			ribbonIconEl.addClass('my-plugin-ribbon-class');
+		}
 
 		// Add ribbon icon for inserting flashcards
 		this.insertFlashcardButton = this.addRibbonIcon('file-plus', 'Insert Flashcard', (_evt: MouseEvent) => {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (activeView) {
+				// Check for mobile-specific requirements
+				if (this.isMobile() && this.settings.availableNoteTypes.length === 0) {
+					new Notice('No cached note types available. Please sync from desktop first to enable flashcard creation on mobile.', 5000);
+					return;
+				}
+
 				const modalProps: FlashcardInsertModalProps = {
 					availableNoteTypes: this.settings.availableNoteTypes,
 					lastUsedNoteType: this.settings.lastUsedNoteType,
@@ -66,16 +76,19 @@ export default class ObsidianAnkiPlugin extends Plugin {
 		});
 		this.insertFlashcardButton.addClass('insert-flashcard-ribbon-class');
 
-		// This adds a status bar item to the bottom of the app
-		this.ankiStatusBar = this.addStatusBarItem();
-		
-		// Connect to Anki on startup
-		await this.connectToAnki('Plugin startup');
+		// Desktop-only: Status bar and Anki connection
+		if (!this.isMobile()) {
+			// This adds a status bar item to the bottom of the app
+			this.ankiStatusBar = this.addStatusBarItem();
+			
+			// Connect to Anki on startup
+			await this.connectToAnki('Plugin startup');
 
-		// Connect to Anki every minute
-		this.registerInterval(window.setInterval(() => {
-			this.connectToAnki('Periodic check');
-		}, 60 * 1000));
+			// Connect to Anki every minute
+			this.registerInterval(window.setInterval(() => {
+				this.connectToAnki('Periodic check');
+			}, 60 * 1000));
+		}
 
 		// Update button state when active view changes
 		this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
@@ -90,26 +103,34 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			this.flashcardProcessor.render(source, el, ctx, this.settings.defaultDeck, this.settings.availableNoteTypes);
 		});
 
-		// Register commands for command palette
-		this.addCommand({
-			id: 'sync-to-anki',
-			name: 'Sync to Anki',
-			hotkeys: [{ modifiers: ['Mod', 'Ctrl'], key: 'a' }],
-			callback: async () => {
-				await this.connectToAnki('Sync command');
-				if (this.availableDecks.length === 0) {
-					new Notice("Cannot connect to Anki");
-					return;
+		// Desktop-only: Register sync command for command palette
+		if (!this.isMobile()) {
+			this.addCommand({
+				id: 'sync-to-anki',
+				name: 'Sync to Anki',
+				hotkeys: [{ modifiers: ['Mod', 'Ctrl'], key: 'a' }],
+				callback: async () => {
+					await this.connectToAnki('Sync command');
+					if (this.availableDecks.length === 0) {
+						new Notice("Cannot connect to Anki");
+						return;
+					}
+					await this.startSyncProcess();
 				}
-				await this.startSyncProcess();
-			}
-		});
+			});
+		}
 
 		this.addCommand({
 			id: 'insert-flashcard',
 			name: 'Insert flashcard',
 			hotkeys: [{ modifiers: ['Mod', 'Ctrl'], key: 'f' }],
 			editorCallback: (_editor, _view) => {
+				// Check for mobile-specific requirements
+				if (this.isMobile() && this.settings.availableNoteTypes.length === 0) {
+					new Notice('No cached note types available. Please sync from desktop first to enable flashcard creation on mobile.', 5000);
+					return;
+				}
+
 				const modalProps: FlashcardInsertModalProps = {
 					availableNoteTypes: this.settings.availableNoteTypes,
 					lastUsedNoteType: this.settings.lastUsedNoteType,
@@ -130,6 +151,10 @@ export default class ObsidianAnkiPlugin extends Plugin {
 
 	}
 
+	private isMobile(): boolean {
+		return Platform.isMobileApp;
+	}
+
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
@@ -139,6 +164,12 @@ export default class ObsidianAnkiPlugin extends Plugin {
 	}
 
 	private async connectToAnki(context: string) {
+		// Skip Anki connection on mobile
+		if (this.isMobile()) {
+			console.log(`[${context}] Skipping Anki connection on mobile platform`);
+			return;
+		}
+
 		try {
 			const [noteTypes, deckNames] = await Promise.all([
 				this.ankiService.getNoteTypes(),
@@ -187,7 +218,7 @@ export default class ObsidianAnkiPlugin extends Plugin {
 			if (!activeView) {
 				reason = 'No markdown editor active';
 			} else if (!hasNoteTypes) {
-				reason = 'No Anki note types available';
+				reason = this.isMobile() ? 'No cached note types available (sync from desktop first)' : 'No Anki note types available';
 			}
 			this.insertFlashcardButton.setAttribute('aria-label', `Insert Flashcard (${reason})`);
 		}

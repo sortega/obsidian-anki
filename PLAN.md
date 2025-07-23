@@ -1,7 +1,6 @@
 # Obsidian Anki Plugin Development Plan
 
 ## Next release
-- Enable the plugin on the mobile app, but just for editing and rendering flashcards rather than syncing
 - More compact rendering of flashcards
 - Better diff rendering
 - Setting to disable debugging logging
@@ -20,6 +19,9 @@
 ### Import flashcard
 - Button, palette action and shortcut to import a flashcard
 - Modal to search for the card and preview what would be inserted
+
+### Rendering
+- Render math
 
 ## Technical Architecture Decisions
 

@@ -1,4 +1,4 @@
-import {App, PluginSettingTab, Setting} from 'obsidian';
+import {App, Platform, PluginSettingTab, Setting} from 'obsidian';
 import {DEFAULT_DECK} from './constants';
 import type ObsidianAnkiPlugin from './main';
 
@@ -14,6 +14,24 @@ export class ObsidianAnkiSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
+
+		// Mobile mode indicator
+		if (Platform.isMobileApp) {
+			const mobileInfo = containerEl.createEl('div', { cls: 'mobile-mode-info' });
+			mobileInfo.style.padding = '10px';
+			mobileInfo.style.marginBottom = '20px';
+			mobileInfo.style.border = '1px solid var(--background-modifier-border)';
+			mobileInfo.style.borderRadius = '6px';
+			mobileInfo.style.backgroundColor = 'var(--background-secondary)';
+			
+			const mobileIcon = mobileInfo.createEl('span', { text: '📱 ' });
+			mobileIcon.style.fontSize = '16px';
+			
+			const mobileText = mobileInfo.createEl('span', { 
+				text: 'Mobile Mode: Syncing is disabled. Flashcard rendering and editing work with cached note types from desktop.'
+			});
+			mobileText.style.fontWeight = '500';
+		}
 
 		// Default Deck setting
 		const deckSetting = new Setting(containerEl)
@@ -57,8 +75,10 @@ export class ObsidianAnkiSettingTab extends PluginSettingTab {
 							.map(tag => tag.trim())
 							.filter(tag => tag.length > 0);
 						await this.plugin.saveSettings();
-						// Update AnkiService with new ignored tags
-						this.plugin['ankiService'].setIgnoredTags(this.plugin.settings.ignoredTags);
+						// Update AnkiService with new ignored tags (only on desktop)
+						if (!Platform.isMobileApp && this.plugin['ankiService']) {
+							this.plugin['ankiService'].setIgnoredTags(this.plugin.settings.ignoredTags);
+						}
 					});
 				
 				// Add CSS class for styling
@@ -73,11 +93,15 @@ export class ObsidianAnkiSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Anki Note Types')
 			.setDesc(hasNoteTypes 
-				? 'Note types saved from the last successful connection to Anki' 
-				: 'No note types cached yet')
+				? Platform.isMobileApp 
+					? 'Cached note types from desktop for flashcard creation'
+					: 'Note types saved from the last successful connection to Anki'
+				: Platform.isMobileApp
+					? 'No cached note types available. Sync from desktop first to enable flashcard creation.'
+					: 'No note types cached yet')
 			.addButton(button => button
 				.setButtonText('Reset Cache')
-				.setDisabled(!hasNoteTypes)
+				.setDisabled(!hasNoteTypes || Platform.isMobileApp)
 				.onClick(async () => {
 					this.plugin.settings.availableNoteTypes = [];
 					await this.plugin.saveSettings();

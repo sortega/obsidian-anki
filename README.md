@@ -6,18 +6,16 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 
 ### Current
 - 📝 **Insert Flashcards**: Create flashcards using a simple code block syntax
-- 🔗 **Anki Integration**: Connect to Anki via AnkiConnect addon
+- 🔗 **Anki Integration**: Connect to Anki via AnkiConnect addon (desktop)
 - 🎨 **Visual Rendering**: Beautiful flashcard display in reading mode
 - ⚙️ **Settings Management**: Configure note types and manage cached data
 - 🎯 **Note Type Selection**: Choose from available Anki note types
-- 🔄 **Full Sync**: Complete vault scanning and bidirectional sync with Anki
+- 🔄 **Full Sync**: Complete vault scanning and bidirectional sync with Anki (desktop)
 - 🔗 **Obsidian Backlinks**: Automatic backlinks from Anki cards to Obsidian notes
 - ⌨️ **Command Palette & Hotkeys**: Access functions via command palette or hotkeys
-- 🖼️ **Media Sync**: Automatic syncing of images and audio files (partially implemented, see limitations below)
-
-### Coming Soon
-- 🧠 **Cloze Deletion**: Specialized syntax for cloze deletion cards
-- 📱 **Mobile support**: Render flashcards nicely when accessing your vault from mobile. Other features won't be enabled.
+- 🖼️ **Media Sync**: Automatic syncing of images and audio files (desktop)
+- 🧠 **Cloze Deletion**: Complete support for cloze deletion cards with color-coded highlighting
+- 📱 **Mobile Support**: Full flashcard rendering and creation on mobile using cached note types
 
 ## Installation
 
@@ -209,12 +207,34 @@ Add to this to your note styles:
 
 Of course, you can experiment with other styles and evolve this snippets to fit your use case.
 
+## Mobile Support
+
+The plugin works seamlessly on mobile devices (iOS and Android) with the following capabilities:
+
+### What Works on Mobile
+- ✅ **Full flashcard rendering** - All flashcard types display correctly
+- ✅ **Flashcard creation** - Insert new flashcards using cached note types
+- ✅ **Cloze deletion support** - Complete color-coded cloze highlighting
+- ✅ **Double-tap to edit** - Double-tap flashcards to navigate to source
+- ✅ **Visual styling** - All CSS styling and themes work
+
+### Mobile Limitations
+- ❌ **No syncing** - AnkiConnect cannot run on mobile devices
+- ⚠️ **Cached note types only** - Uses note types saved from last desktop sync
+
+### Getting Started on Mobile
+1. First, sync your vault from desktop to cache note types
+2. On mobile, use the "Insert Flashcard" button to create cards
+3. Your mobile-created flashcards will sync when you return to desktop
+
 ## Configuration
 
 Access plugin settings through Settings → Plugin Options → Obsidian Anki:
 - **Default Deck**: Choose where new flashcards will be created in Anki
 - **Ignored Tags**: Configure tags to ignore during sync (default: marked, leech)
 - **Note Type Cache**: View cached note types from your last Anki connection and reset if needed
+
+On mobile, settings show a mobile mode indicator with explanatory text.
 
 ## Development
 

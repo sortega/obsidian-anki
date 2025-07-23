@@ -180,15 +180,36 @@ The plugin includes comprehensive media file synchronization capabilities:
 6. Transform HTML content to use Anki media filenames
 7. Reverse transformation for display purposes
 
+## Mobile Support
+
+The plugin fully supports mobile platforms (iOS and Android) with a subset of functionality:
+
+### Mobile Features
+- **Full flashcard rendering** - All flashcard types (Basic, Cloze, etc.) render correctly
+- **Flashcard creation** - Insert flashcard modal works with cached note types from desktop
+- **Cloze deletion support** - Complete cloze highlighting and rendering on mobile
+- **Double-tap to edit** - Navigate to flashcard source by double-tapping (mobile-optimized touch handling)
+
+### Mobile Limitations
+- **No syncing** - AnkiConnect cannot run on mobile devices
+- **Cached note types only** - Uses note types cached from last desktop sync
+
+### Mobile-Specific UI
+- **Mobile mode indicator** - Settings tab shows mobile status with helpful instructions
+- **Graceful degradation** - Sync features are cleanly disabled without errors
+- **Helpful notices** - Clear messaging when cached note types are unavailable
+
 ## Development Notes
 
-- The plugin requires Anki to be running with AnkiConnect addon for proper functionality
+- The plugin requires Anki to be running with AnkiConnect addon for proper functionality (desktop only)
 - TypeScript compilation uses strict null checks and targets ES6
-- Plugin manifest shows it's compatible with Obsidian 0.15.0+
+- Plugin manifest shows it's compatible with Obsidian 0.15.0+ and mobile platforms
 - Development build includes inline source maps for debugging
 - Development plan and roadmap available at PLAN.md
 - Settings store note types from last successful Anki connection for offline use
 - Button states update based on active editor and available note types
+- Platform detection using `Platform.isMobileApp` for conditional feature loading
+- Mobile touch handling with custom double-tap detection (500ms threshold, 80px position tolerance)
 
 ## Testing
 
