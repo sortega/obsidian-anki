@@ -48,6 +48,7 @@ The plugin follows hexagonal architecture principles with clean separation betwe
 - `SyncProgressModal` - Modal for vault scanning and sync progress tracking
 - `SyncConfirmationModal` - Modal for reviewing and confirming sync changes
 - `SampleModal` - Legacy modal component (should be removed in cleanup)
+- `ClozeHighlighter` - Recursive cloze deletion parsing with balanced brace counting and hint support
 
 ## Flashcard Format
 
@@ -64,6 +65,28 @@ Tags:
 ```
 
 **Important**: Tags must be formatted as a YAML list using the dash syntax. String formats like `Tags: "topic1, topic2"` are not supported and will cause parsing errors.
+
+## Cloze Deletion Support
+
+The plugin provides comprehensive support for Anki's Cloze note type with special rendering and advanced features:
+
+### Cloze Syntax
+- **Basic**: `{{c1::answer}}` - Simple cloze deletion
+- **With Hints**: `{{c1::answer::hint}}` - Cloze with hint text (hint not displayed in preview)
+- **Nested**: `{{c1::outer {{c2::inner}} content}}` - Recursive nested cloze deletions
+- **Multiple**: `{{c1::first}} and {{c1::second}}` - Multiple deletions with same number
+
+### Special Rendering
+- **Paragraph-like**: Cloze cards render without headers/borders for natural reading flow
+- **Color-coded**: Each cloze number gets a distinct color (cloze-1 through cloze-10, cycling)
+- **Hover Effects**: Visual feedback when hovering over cloze deletions
+- **Extra Field**: Automatically rendered as a separate paragraph with muted styling
+
+### Technical Implementation
+- **Recursive Parsing**: `ClozeHighlighter.highlightClozes()` handles arbitrary nesting with balanced brace counting
+- **Hint Processing**: Correctly strips `::hint` suffixes while preserving nested content
+- **CSS Classes**: `.cloze-deletion .cloze-N` with transparency for light/dark themes
+- **Hover Popups**: Display warnings, tags, deck, and sync status on hover
 
 ## Front-matter Processing
 
@@ -157,10 +180,6 @@ The plugin includes comprehensive media file synchronization capabilities:
 6. Transform HTML content to use Anki media filenames
 7. Reverse transformation for display purposes
 
-## Current Limitations & TODOs
-
-- No cloze deletion syntax support
-
 ## Development Notes
 
 - The plugin requires Anki to be running with AnkiConnect addon for proper functionality
@@ -178,6 +197,7 @@ The plugin includes comprehensive test coverage with Jest:
 - **Core Functionality Tests** - Flashcard parsing, note metadata, and Anki service operations
 - **Media Pipeline Tests** - Media transformation, extraction, and sync functionality with base64 encoding validation
 - **Renderer Tests** - Flashcard rendering with proper mocking and image source resolution
+- **Cloze Highlighting Tests** - Recursive cloze deletion parsing with nested patterns and hint handling
 - **DOM Manipulation Tests** - Verification that DOM operations preserve encoding correctly
 - **Shared Test Helpers** - Reusable test utilities in `tests/test-helpers.ts` for consistent testing
 

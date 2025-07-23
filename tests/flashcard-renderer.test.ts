@@ -10,7 +10,6 @@ jest.mock('obsidian', () => ({
 }), { virtual: true });
 
 import { FlashcardRenderer } from '../flashcard-renderer';
-import { HtmlFlashcard } from '../flashcard';
 import { createDocument, createMockHtmlFlashcard } from './test-helpers';
 
 describe('FlashcardRenderer', () => {

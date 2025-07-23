@@ -2,6 +2,7 @@ import {App, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView} fr
 import {BlockFlashcardParser, HtmlFlashcard, NoteType} from './flashcard';
 import {MarkdownService} from './markdown-service';
 import {parseNoteMetadata} from './note-metadata';
+import {ClozeHighlighter} from './cloze-highlighting';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private readonly htmlFlashcard: HtmlFlashcard;
@@ -20,6 +21,14 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 	}
 
 	private render() {
+		if (this.htmlFlashcard.noteType === 'Cloze') {
+			this.renderCloze();
+		} else {
+			this.renderRegular();
+		}
+	}
+
+	private renderRegular() {
 		const { containerEl } = this;
 		containerEl.empty();
 		containerEl.addClass('flashcard-container');
@@ -52,22 +61,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 
 		// Add warnings indicator if warnings exist
 		if (this.htmlFlashcard.warnings.length > 0) {
-			const warningContainer = header.createEl('span', { 
-				cls: 'flashcard-warning-container'
-			});
-			
-			warningContainer.createEl('span', {
-				cls: 'flashcard-warning-icon',
-				text: 'ⓘ'
-			});
-			
-			warningContainer.createEl('span', {
-				cls: 'flashcard-warning-title',
-				text: 'Warnings'
-			});
-			
-			// Create hover popup for warnings
-			this.setupHoverPopup(warningContainer, this.htmlFlashcard.warnings.join('\n'), 'warning');
+			this.addWarningsIndicator(header);
 		}
 
 		// Content area
@@ -94,6 +88,93 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		}
 
 		// Footer with tags and deck
+		this.addFooter(containerEl);
+	}
+
+	private renderCloze() {
+		const { containerEl } = this;
+		containerEl.empty();
+		containerEl.addClass('cloze-container');
+		containerEl.addClass('flashcard-clickable');
+
+		// Add click handler to navigate to source
+		containerEl.addEventListener('click', () => {
+			this.navigateToSource();
+		});
+
+		// Add warning styling if warnings exist
+		if (this.htmlFlashcard.warnings.length > 0) {
+			containerEl.addClass('flashcard-warning');
+		}
+
+		// Content area - direct paragraph-like rendering without header
+		const content = containerEl.createEl('div', { cls: 'cloze-content' });
+
+		// For cloze cards, we expect a single "Text" field
+		const textField = this.htmlFlashcard.htmlFields['Text'];
+		if (textField) {
+			const textEl = content.createEl('div', { cls: 'cloze-text' });
+			textEl.innerHTML = this.highlightClozes(this.resolveImageSources(textField));
+		}
+
+		// Render Extra field if present
+		const extraField = this.htmlFlashcard.htmlFields['Extra'];
+		if (extraField && extraField.body.innerHTML.trim()) {
+			const extraEl = content.createEl('div', { cls: 'cloze-extra' });
+			extraEl.innerHTML = this.resolveImageSources(extraField);
+		}
+
+		// Add hover popup for metadata
+		this.addClozeHoverPopup(containerEl);
+	}
+
+	private addWarningsIndicator(header: HTMLElement) {
+		const warningContainer = header.createEl('span', { 
+			cls: 'flashcard-warning-container'
+		});
+		
+		warningContainer.createEl('span', {
+			cls: 'flashcard-warning-icon',
+			text: 'ⓘ'
+		});
+		
+		warningContainer.createEl('span', {
+			cls: 'flashcard-warning-title',
+			text: 'Warnings'
+		});
+		
+		// Create hover popup for warnings
+		this.setupHoverPopup(warningContainer, this.htmlFlashcard.warnings.join('\n'), 'warning');
+	}
+
+	private addClozeHoverPopup(element: HTMLElement) {
+		const popupInfo: string[] = [];
+		
+		// Add warnings if any
+		if (this.htmlFlashcard.warnings.length > 0) {
+			popupInfo.push(`⚠️ Warnings:\n${this.htmlFlashcard.warnings.join('\n')}`);
+		}
+		
+		// Always show deck info
+		popupInfo.push(`📚 Deck: ${this.htmlFlashcard.deck}`);
+		
+		// Add tags if any (excluding obsidian- tags)
+		const visibleTags = this.htmlFlashcard.tags.filter((tag: string) => !tag.startsWith('obsidian-'));
+		if (visibleTags.length > 0) {
+			popupInfo.push(`🏷️ Tags: ${visibleTags.join(', ')}`);
+		}
+		
+		// Add sync status
+		if (!this.htmlFlashcard.ankiId) {
+			popupInfo.push('🆕 Not yet synced to Anki');
+		}
+		
+		const popupMessage = popupInfo.join('\n\n');
+		this.setupHoverPopup(element, popupMessage, 'info');
+	}
+
+
+	private addFooter(containerEl: HTMLElement) {
 		const visibleTags = this.htmlFlashcard.tags.filter((tag: string) => !tag.startsWith('obsidian-'));
 		if (visibleTags.length > 0 || this.htmlFlashcard.deck !== this.defaultDeck) {
 			const footer = containerEl.createEl('div', { cls: 'flashcard-footer' });
@@ -124,6 +205,10 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 				});
 			}
 		}
+	}
+
+	private highlightClozes(html: string): string {
+		return ClozeHighlighter.highlightClozes(html);
 	}
 
 	private capitalizeFirst(str: string): string {
@@ -163,7 +248,7 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			   !src.startsWith('/');
 	}
 
-	private setupHoverPopup(triggerElement: HTMLElement, message: string, type: 'warning' | 'error') {
+	private setupHoverPopup(triggerElement: HTMLElement, message: string, type: 'warning' | 'error' | 'info') {
 		let popup: HTMLElement | null = null;
 		let hideTimeout: NodeJS.Timeout | null = null;
 
@@ -296,7 +381,7 @@ export class FlashcardCodeBlockProcessor {
 		}
 	}
 
-	private setupHoverPopup(triggerElement: HTMLElement, message: string, type: 'warning' | 'error') {
+	private setupHoverPopup(triggerElement: HTMLElement, message: string, type: 'warning' | 'error' | 'info') {
 		let popup: HTMLElement | null = null;
 		let hideTimeout: NodeJS.Timeout | null = null;
 

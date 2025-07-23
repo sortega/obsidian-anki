@@ -825,3 +825,103 @@ If your plugin does not need CSS, delete this file.
 .theme-dark .flashcard-popup {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
+
+/* Cloze deletion rendering styles */
+.cloze-container {
+    font-family: var(--font-text);
+    line-height: 1.6;
+    margin: 8px 0;
+}
+
+.cloze-content {
+    color: var(--text-normal);
+    font-size: var(--font-ui-medium);
+}
+
+.cloze-text {
+    margin: 0;
+    padding: 0;
+}
+
+.cloze-text p {
+    margin: 0.5em 0;
+}
+
+.cloze-text p:first-child {
+    margin-top: 0;
+}
+
+.cloze-text p:last-child {
+    margin-bottom: 0;
+}
+
+.cloze-field {
+    margin: 0.5em 0;
+}
+
+.cloze-field:first-child {
+    margin-top: 0;
+}
+
+.cloze-field:last-child {
+    margin-bottom: 0;
+}
+
+.cloze-extra {
+    margin-top: 1em;
+    padding-top: 0.5em;
+    border-top: 1px solid var(--background-modifier-border);
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Cloze deletion highlighting with color coding */
+.cloze-deletion {
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+/* Color-coded cloze deletions with transparency */
+.cloze-1 { background-color: rgba(255, 99, 71, 0.3); }      /* Tomato */
+.cloze-2 { background-color: rgba(60, 179, 113, 0.3); }     /* Medium Sea Green */
+.cloze-3 { background-color: rgba(30, 144, 255, 0.3); }     /* Dodger Blue */
+.cloze-4 { background-color: rgba(255, 165, 0, 0.3); }      /* Orange */
+.cloze-5 { background-color: rgba(147, 112, 219, 0.3); }    /* Medium Purple */
+.cloze-6 { background-color: rgba(255, 20, 147, 0.3); }     /* Deep Pink */
+.cloze-7 { background-color: rgba(0, 206, 209, 0.3); }      /* Dark Turquoise */
+.cloze-8 { background-color: rgba(255, 215, 0, 0.3); }      /* Gold */
+.cloze-9 { background-color: rgba(220, 20, 60, 0.3); }      /* Crimson */
+.cloze-10 { background-color: rgba(46, 139, 87, 0.3); }     /* Sea Green */
+
+/* Fallback for cloze numbers > 10 */
+.cloze-deletion:not([class*="cloze-"]) {
+    background-color: rgba(128, 128, 128, 0.3); /* Gray fallback */
+}
+
+/* Hover effects for cloze deletions */
+.cloze-deletion:hover {
+    transform: scale(1.02);
+    filter: brightness(1.1);
+}
+
+/* Dark theme adjustments */
+.theme-dark .cloze-1 { background-color: rgba(255, 99, 71, 0.4); }
+.theme-dark .cloze-2 { background-color: rgba(60, 179, 113, 0.4); }
+.theme-dark .cloze-3 { background-color: rgba(30, 144, 255, 0.4); }
+.theme-dark .cloze-4 { background-color: rgba(255, 165, 0, 0.4); }
+.theme-dark .cloze-5 { background-color: rgba(147, 112, 219, 0.4); }
+.theme-dark .cloze-6 { background-color: rgba(255, 20, 147, 0.4); }
+.theme-dark .cloze-7 { background-color: rgba(0, 206, 209, 0.4); }
+.theme-dark .cloze-8 { background-color: rgba(255, 215, 0, 0.4); }
+.theme-dark .cloze-9 { background-color: rgba(220, 20, 60, 0.4); }
+.theme-dark .cloze-10 { background-color: rgba(46, 139, 87, 0.4); }
+
+/* Info popup for cloze metadata */
+.flashcard-popup-info {
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    border-color: var(--text-muted);
+}

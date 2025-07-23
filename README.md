@@ -135,7 +135,7 @@ Tags:
 The plugin automatically detects your Anki note types and their fields. Common formats include:
 - **Basic**: Front, Back
 - **Basic (and reversed card)**: Front, Back
-- **Cloze**: Text
+- **Cloze**: Text, Extra. This note type is rendered as a paragraph with highlights. ![](media/cloze-deletion.png)
 - **Custom note types**: Any fields you've defined
 
 ### Syncing to Anki

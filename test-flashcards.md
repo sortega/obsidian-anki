@@ -241,3 +241,91 @@ Tags:
   - local
   - global
 ```
+
+## Cloze Deletion Examples
+
+### Basic Cloze
+
+```flashcard
+NoteType: Cloze
+Text: The capital of France is {{c1::Paris}} and it has approximately {{c2::2.2 million}} inhabitants.
+Deck: Geography
+Tags:
+  - europe
+  - capitals
+```
+
+### Cloze with Hints
+
+```flashcard
+NoteType: Cloze
+Text: The {{c1::mitochondria::organelle}} is the {{c2::powerhouse::function}} of the {{c1::cell::basic unit}}.
+Deck: Biology
+Tags:
+  - cell-biology
+```
+
+### Multiple Same Cloze Numbers
+
+```flashcard
+NoteType: Cloze
+Text: Water freezes at {{c1::0°C}} and boils at {{c2::100°C}} under standard conditions.
+Tags:
+  - chemistry
+  - physics
+```
+
+### Complex Content
+
+```flashcard
+NoteType: Cloze
+Text: Einstein's famous equation is {{c1::E = mc²}} where {{c2::E represents energy}}, {{c3::m represents mass}}, and {{c4::c represents the speed of light}}.
+Deck: Physics
+Tags:
+  - relativity
+  - equations
+```
+
+### Nested Cloze Deletions
+
+```flashcard
+NoteType: Cloze
+Text: The {{c1::capital of {{c2::France}} is {{c3::Paris}}}}.
+Tags:
+  - geography
+  - nested
+```
+
+### Deeply Nested Cloze
+
+```flashcard
+NoteType: Cloze
+Text: The {{c1::{{c2::best}} example of {{c3::nested {{c4::cloze}} deletions}}}}.
+Tags:
+  - examples
+  - complex
+```
+
+### Cloze with Extra Field
+
+```flashcard
+NoteType: Cloze
+Text: The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell.
+Extra: Remember that mitochondria have their own DNA and are thought to have evolved from bacteria that were engulfed by early eukaryotic cells.
+Deck: Biology
+Tags:
+  - cell-biology
+  - organelles
+```
+
+### Cloze with Warnings (Hover to see info)
+
+```flashcard
+NoteType: Cloze
+Text: The {{c1::nucleus}} controls the cell and contains {{c2::DNA}}.
+UnknownField: This will generate a warning
+Deck: Advanced Biology
+Tags:
+  - cell-biology
+  - genetics
+```

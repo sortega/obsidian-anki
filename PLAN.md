@@ -4,17 +4,10 @@
 - Enable the plugin on the mobile app, but just for editing and rendering flashcards rather than syncing
 - More compact rendering of flashcards
 - Better diff rendering
-- Cloze flashcards special treatment
 - Setting to disable debugging logging
 - Enable beta reviews with https://github.com/TfTHacker/obsidian42-brat
 
 ## Feature Roadmap
-
-### Cloze flashcards special treatment
-- Validate cloze markers
-- Render the note differently
-- Special syntax to embed cloze deletions within paragraphs
-- Render as highlighted text when cursor is elsewhere
 
 ### Syncing
 - Find Anki Notes when their ids are referenced even if they lack the `obsidian-*` tags
