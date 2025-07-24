@@ -1,7 +1,6 @@
 # Obsidian Anki Plugin Development Plan
 
 ## Next release
-- More compact rendering of flashcards
 - Better diff rendering
 - Setting to disable debugging logging
 - Enable beta reviews with https://github.com/TfTHacker/obsidian42-brat

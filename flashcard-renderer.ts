@@ -3,6 +3,7 @@ import {BlockFlashcardParser, HtmlFlashcard, NoteType} from './flashcard';
 import {MarkdownService} from './markdown-service';
 import {parseNoteMetadata} from './note-metadata';
 import {ClozeHighlighter} from './cloze-highlighting';
+import {DEFAULT_NOTE_TYPE} from './constants';
 
 export class FlashcardRenderer extends MarkdownRenderChild {
 	private readonly htmlFlashcard: HtmlFlashcard;
@@ -44,23 +45,9 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 			containerEl.addClass('flashcard-warning');
 		}
 
-		// Header with the note type
-		const header = containerEl.createEl('div', { cls: 'flashcard-header' });
-		header.createEl('span', { 
-			text: `Note Type: ${this.htmlFlashcard.noteType}`,
-			cls: 'flashcard-note-type'
-		});
-
-		// Add NEW indicator if flashcard hasn't been synced yet
-		if (!this.htmlFlashcard.ankiId) {
-			header.createEl('span', { 
-				text: 'NEW',
-				cls: 'flashcard-new-indicator'
-			});
-		}
-
-		// Add warnings indicator if warnings exist
+		// Header only needed for warnings
 		if (this.htmlFlashcard.warnings.length > 0) {
+			const header = containerEl.createEl('div', { cls: 'flashcard-header' });
 			this.addWarningsIndicator(header);
 		}
 
@@ -176,29 +163,51 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 
 	private addFooter(containerEl: HTMLElement) {
 		const visibleTags = this.htmlFlashcard.tags.filter((tag: string) => !tag.startsWith('obsidian-'));
-		if (visibleTags.length > 0 || this.htmlFlashcard.deck !== this.defaultDeck) {
+		const hasNewIndicator = !this.htmlFlashcard.ankiId;
+		const hasNonDefaultNoteType = this.htmlFlashcard.noteType !== DEFAULT_NOTE_TYPE;
+		const hasVisibleTags = visibleTags.length > 0;
+		const hasNonDefaultDeck = this.htmlFlashcard.deck !== this.defaultDeck;
+		
+		// Show footer if any of these elements are present
+		if (hasNewIndicator || hasNonDefaultNoteType || hasVisibleTags || hasNonDefaultDeck) {
 			const footer = containerEl.createEl('div', { cls: 'flashcard-footer' });
 			
-			// Left side: tags
-			const tagsContainer = footer.createEl('div', { cls: 'flashcard-tags-container' });
-			if (visibleTags.length > 0) {
-				tagsContainer.createEl('span', {
-					text: 'Tags: ',
-					cls: 'flashcard-tags-label'
+			// Left side container for NEW + note type + tags
+			const leftContainer = footer.createEl('div', { cls: 'flashcard-footer-left' });
+			
+			// 1. NEW indicator
+			if (hasNewIndicator) {
+				leftContainer.createEl('span', { 
+					text: 'NEW',
+					cls: 'flashcard-new-indicator'
 				});
-				tagsContainer.createEl('span', {
-					text: visibleTags.join(', '),
-					cls: 'flashcard-tags-content'
+			}
+			
+			// 2. Note type pill (when different from default)
+			if (hasNonDefaultNoteType) {
+				leftContainer.createEl('span', {
+					text: this.htmlFlashcard.noteType,
+					cls: 'flashcard-note-type-pill'
+				});
+			}
+			
+			// 3. Tags
+			if (hasVisibleTags) {
+				const tagsContainer = leftContainer.createEl('span', {
+					cls: 'flashcard-tags-container'
+				});
+				
+				visibleTags.forEach(tag => {
+					tagsContainer.createEl('span', {
+						text: tag,
+						cls: 'flashcard-tag'
+					});
 				});
 			}
 			
 			// Right side: deck
-			if (this.htmlFlashcard.deck !== this.defaultDeck) {
+			if (hasNonDefaultDeck) {
 				const deckContainer = footer.createEl('div', { cls: 'flashcard-deck-container' });
-				deckContainer.createEl('span', {
-					text: 'Deck: ',
-					cls: 'flashcard-deck-label'
-				});
 				deckContainer.createEl('span', {
 					text: this.htmlFlashcard.deck,
 					cls: 'flashcard-deck-content'
