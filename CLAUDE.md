@@ -188,7 +188,7 @@ The plugin fully supports mobile platforms (iOS and Android) with a subset of fu
 - **Full flashcard rendering** - All flashcard types (Basic, Cloze, etc.) render correctly
 - **Flashcard creation** - Insert flashcard modal works with cached note types from desktop
 - **Cloze deletion support** - Complete cloze highlighting and rendering on mobile
-- **Double-tap to edit** - Navigate to flashcard source by double-tapping (mobile-optimized touch handling)
+- **Edit flashcards** - Navigate to flashcard source by tapping the edit icon (always visible on mobile)
 
 ### Mobile Limitations
 - **No syncing** - AnkiConnect cannot run on mobile devices
@@ -209,7 +209,7 @@ The plugin fully supports mobile platforms (iOS and Android) with a subset of fu
 - Settings store note types from last successful Anki connection for offline use
 - Button states update based on active editor and available note types
 - Platform detection using `Platform.isMobileApp` for conditional feature loading
-- Mobile touch handling with custom double-tap detection (500ms threshold, 80px position tolerance)
+- Mobile edit icon always visible for easy flashcard editing
 
 ## Testing
 

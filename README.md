@@ -215,7 +215,7 @@ The plugin works seamlessly on mobile devices (iOS and Android) with the followi
 - ✅ **Full flashcard rendering** - All flashcard types display correctly
 - ✅ **Flashcard creation** - Insert new flashcards using cached note types
 - ✅ **Cloze deletion support** - Complete color-coded cloze highlighting
-- ✅ **Double-tap to edit** - Double-tap flashcards to navigate to source
+- ✅ **Edit flashcards** - Tap the edit icon to navigate to source and modify flashcards
 - ✅ **Visual styling** - All CSS styling and themes work
 
 ### Mobile Limitations

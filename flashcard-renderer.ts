@@ -1,4 +1,4 @@
-import {App, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView, Platform} from 'obsidian';
+import {App, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView} from 'obsidian';
 import {BlockFlashcardParser, HtmlFlashcard, NoteType} from './flashcard';
 import {MarkdownService} from './markdown-service';
 import {parseNoteMetadata} from './note-metadata';
@@ -33,16 +33,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		containerEl.empty();
 		containerEl.addClass('flashcard-container');
 
-		// Platform-specific event handling
-		if (Platform.isMobileApp) {
-			this.addMobileTouchHandler(containerEl);
-			containerEl.addClass('flashcard-mobile-touchable');
-		} else {
-			containerEl.addEventListener('click', () => {
-				this.navigateToSource();
-			});
-			containerEl.addClass('flashcard-clickable');
-		}
+		// Add click handler for navigation
+		containerEl.addEventListener('click', () => {
+			this.navigateToSource();
+		});
+		containerEl.addClass('flashcard-clickable');
 
 		// Add warning styling if warnings exist
 		if (this.htmlFlashcard.warnings.length > 0) {
@@ -101,16 +96,11 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		containerEl.empty();
 		containerEl.addClass('cloze-container');
 
-		// Platform-specific event handling
-		if (Platform.isMobileApp) {
-			this.addMobileTouchHandler(containerEl);
-			containerEl.addClass('flashcard-mobile-touchable');
-		} else {
-			containerEl.addEventListener('click', () => {
-				this.navigateToSource();
-			});
-			containerEl.addClass('flashcard-clickable');
-		}
+		// Add click handler for navigation
+		containerEl.addEventListener('click', () => {
+			this.navigateToSource();
+		});
+		containerEl.addClass('flashcard-clickable');
 
 		// Add warning styling if warnings exist
 		if (this.htmlFlashcard.warnings.length > 0) {
@@ -316,33 +306,6 @@ export class FlashcardRenderer extends MarkdownRenderChild {
 		this.register(() => hidePopup());
 	}
 
-	private addMobileTouchHandler(element: HTMLElement) {
-		let lastTouchTime = 0;
-		let lastTouchX = 0;
-		let lastTouchY = 0;
-		const DOUBLE_TOUCH_THRESHOLD = 500; // milliseconds
-		const TOUCH_POSITION_THRESHOLD = 80; // pixels
-
-		element.addEventListener('touchend', (e) => {
-			const touch = e.changedTouches[0];
-			const currentTime = Date.now();
-			const timeDiff = currentTime - lastTouchTime;
-			const positionDiff = Math.sqrt(
-				Math.pow(touch.clientX - lastTouchX, 2) + 
-				Math.pow(touch.clientY - lastTouchY, 2)
-			);
-
-			if (timeDiff < DOUBLE_TOUCH_THRESHOLD && positionDiff < TOUCH_POSITION_THRESHOLD) {
-				// Double touch detected - prevent default and navigate
-				e.preventDefault();
-				this.navigateToSource();
-			}
-
-			lastTouchTime = currentTime;
-			lastTouchX = touch.clientX;
-			lastTouchY = touch.clientY;
-		});
-	}
 
 	private navigateToSource() {
 		const { sourcePath, lineStart } = this.htmlFlashcard;
