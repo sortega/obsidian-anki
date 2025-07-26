@@ -47,8 +47,11 @@ The plugin follows hexagonal architecture principles with clean separation betwe
 - `ObsidianAnkiSettingTab` - Settings interface for plugin configuration and note type cache
 - `SyncProgressModal` - Modal for vault scanning and sync progress tracking
 - `SyncConfirmationModal` - Modal for reviewing and confirming sync changes
+- `FlashcardDiffRenderer` - Renders compact diff views for changed flashcards with structured change detection
+- `HtmlFlashcardDiffer` - Analyzes differences between HTML flashcards and provides structured diff data
 - `SampleModal` - Legacy modal component (should be removed in cleanup)
 - `ClozeHighlighter` - Recursive cloze deletion parsing with balanced brace counting and hint support
+- `NavigationUtils` - Centralized navigation utility for file and line navigation
 
 ## Flashcard Format
 
@@ -179,6 +182,22 @@ The plugin includes comprehensive media file synchronization capabilities:
 5. Upload new/changed media files to Anki collection
 6. Transform HTML content to use Anki media filenames
 7. Reverse transformation for display purposes
+
+## Structured Diff Rendering
+
+The plugin provides advanced diff rendering for changed flashcards using a structured approach:
+
+- **Compact Change Detection** - Uses `HtmlFlashcardDiffer` to analyze specific differences (deck, tags, fields, note type, source path)
+- **Word-Level Field Diffing** - Employs the `diff` library for precise HTML content comparison at word boundaries
+- **Progressive Disclosure** - Shows compact summaries with expandable full preview for detailed examination
+- **Performance Optimization** - Pre-computes HTML conversions and diffs during analysis to avoid redundant work during rendering
+- **Structured Data** - Uses `ChangedFlashcard` interface to bundle all necessary data (flashcard, AnkiNote, HTML versions, and diff results)
+
+### Diff Architecture
+- **`HtmlFlashcardDiffer`** - Core diffing engine that returns `FlashcardDiff` objects with optional properties for each change type
+- **`FlashcardDiffRenderer`** - Renders compact diff views using pre-computed data to eliminate duplicate conversions
+- **`ChangedFlashcard` Interface** - Bundles flashcard data, AnkiNote, HTML versions, and diff results for efficient rendering
+- **Progressive Loading** - Full previews are lazy-loaded only when user expands the details section
 
 ## Mobile Support
 

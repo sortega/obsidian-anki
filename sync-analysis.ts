@@ -1,17 +1,30 @@
-import {App, CachedMetadata, MarkdownView, Modal, Notice, TFile} from 'obsidian';
+import {App, CachedMetadata, Modal, Notice, TFile} from 'obsidian';
 import {AnkiNote, AnkiService, MediaItem} from './anki-service';
 import {BlockFlashcardParser, Flashcard, FlashcardBlock, HtmlFlashcard, InvalidFlashcard, NoteType} from './flashcard';
 import {MarkdownService} from './markdown-service';
 import {FlashcardRenderer} from './flashcard-renderer';
 import {SyncExecutionModal} from './sync-execution';
 import {NoteMetadata, parseNoteMetadata} from './note-metadata';
+import {FlashcardDiffRenderer} from './flashcard-diff-renderer';
+import {navigateToFile} from './navigation-utils';
+import {HtmlFlashcardDiffer, FlashcardDiff} from "./html-flashcard-differ";
+
+const PREVIEW_ITEMS_LIMIT = 100;
+
+export interface ChangedFlashcard {
+	flashcard: Flashcard;
+	ankiNote: AnkiNote;
+	htmlFlashcard: HtmlFlashcard;
+	ankiHtmlFlashcard: HtmlFlashcard;
+	diff: FlashcardDiff;
+}
 
 export interface SyncAnalysis {
 	totalFiles: number;
 	scannedFiles: number;
 	newFlashcards: Flashcard[];
-	changedFlashcards: [AnkiNote, Flashcard][];
-	unchangedFlashcards: number;
+	changedFlashcards: ChangedFlashcard[];
+	unchangedFlashcards: Flashcard[];
 	invalidFlashcards: InvalidFlashcard[];
 	deletedAnkiNotes: AnkiNote[];
 	ankiNotes: Map<number, AnkiNote>;
@@ -27,6 +40,7 @@ export class SyncProgressModal extends Modal {
 	private analysis: SyncAnalysis;
 	private onComplete: (analysis: SyncAnalysis) => void;
 	private ankiService: AnkiService;
+	private flashcardDiffer: HtmlFlashcardDiffer;
 	private vaultName: string;
 	private availableNoteTypes: NoteType[];
 	private settings: { defaultDeck: string };
@@ -35,6 +49,7 @@ export class SyncProgressModal extends Modal {
 		super(app);
 		this.onComplete = onComplete;
 		this.ankiService = ankiService;
+		this.flashcardDiffer = new HtmlFlashcardDiffer();
 		this.availableNoteTypes = availableNoteTypes;
 		this.settings = settings;
 		this.vaultName = app.vault.getName();
@@ -43,7 +58,7 @@ export class SyncProgressModal extends Modal {
 			scannedFiles: 0,
 			newFlashcards: [],
 			changedFlashcards: [],
-			unchangedFlashcards: 0,
+			unchangedFlashcards: [],
 			invalidFlashcards: [],
 			deletedAnkiNotes: [],
 			ankiNotes: new Map(),
@@ -93,7 +108,7 @@ export class SyncProgressModal extends Modal {
 			// First, search Anki for existing notes
 			const ankiNoteIds = await this.searchAnki();
 			
-			// Then scan vault and categorize in one go
+			// Then scan the vault and categorize in one go
 			await this.scanVaultAndCategorize(ankiNoteIds);
 			
 			// Finally, load media content for discovered media files
@@ -160,10 +175,8 @@ export class SyncProgressModal extends Modal {
 					const mediaPaths = this.extractMediaPaths(htmlFlashcard);
 					mediaPaths.forEach(path => this.analysis.discoveredMediaPaths.add(path));
 
-					// Valid flashcard - categorize based on ankiId and content comparison
-					const ankiId = flashcard.ankiId;
-
 					// No ankiId or card was deleted from Anki - treat as new
+					const ankiId = flashcard.ankiId;
 					if (!ankiId || !ankiNoteIds.includes(ankiId)) {
 						this.analysis.newFlashcards.push(flashcard);
 						continue;
@@ -173,10 +186,18 @@ export class SyncProgressModal extends Modal {
 					const ankiNote = this.analysis.ankiNotes.get(ankiId);
 					if (ankiNote) {
 						const ankiHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote);
-						if (this.compareHtmlFlashcards(htmlFlashcard, ankiHtmlFlashcard)) {
-							this.analysis.unchangedFlashcards++;
+						const diff = this.flashcardDiffer.diff(ankiHtmlFlashcard, htmlFlashcard);
+						if (diff) {
+							console.log("Flashcard diff", diff);
+							this.analysis.changedFlashcards.push({
+								flashcard,
+								ankiNote,
+								htmlFlashcard,
+								ankiHtmlFlashcard,
+								diff
+							});
 						} else {
-							this.analysis.changedFlashcards.push([ankiNote, flashcard]);
+							this.analysis.unchangedFlashcards.push(flashcard);
 						}
 					}
 					seenAnkiIds.add(ankiId);
@@ -312,75 +333,6 @@ export class SyncProgressModal extends Modal {
 		
 		return ankiNotes;
 	}
-	
-	private compareHtmlFlashcards(flashcard1: HtmlFlashcard, flashcard2: HtmlFlashcard): boolean {
-		try {
-			// Get all field names from both flashcards
-			const allFieldNames = new Set([
-				...Object.keys(flashcard1.htmlFields),
-				...Object.keys(flashcard2.htmlFields)
-			]);
-			
-			// Check all fields (catch missing fields in either flashcard)
-			for (const fieldName of allFieldNames) {
-				const doc1 = flashcard1.htmlFields[fieldName];
-				const doc2 = flashcard2.htmlFields[fieldName];
-				const html1 = doc1 ? doc1.body.innerHTML : '';
-				const html2 = doc2 ? doc2.body.innerHTML : '';
-				
-				// Direct HTML comparison
-				if (html1 !== html2) {
-					console.log(`Field mismatch in ${fieldName}:`, {
-						flashcard1: html1,
-						flashcard2: html2
-					});
-					return false;
-				}
-			}
-			
-			// Compare tags as sets, ignoring order and ignored tags
-			const tags1 = new Set(this.ankiService.filterIgnoredTags(flashcard1.tags));
-			const tags2 = new Set(this.ankiService.filterIgnoredTags(flashcard2.tags));
-			
-			// Check if sets are equal (same tags, ignore order)
-			if (tags1.size !== tags2.size) {
-				console.log('Tags mismatch (different count):', {
-					flashcard1: Array.from(tags1),
-					flashcard2: Array.from(tags2)
-				});
-				return false;
-			}
-			
-			for (const tag of tags1) {
-				if (!tags2.has(tag)) {
-					console.log('Tags mismatch (missing tag):', {
-						flashcard1: Array.from(tags1),
-						flashcard2: Array.from(tags2),
-						missingTag: tag
-					});
-					return false;
-				}
-			}
-			
-			// Compare deck names
-			if (flashcard1.deck !== flashcard2.deck) {
-				console.log('Deck mismatch:', {
-					flashcard1: flashcard1.deck,
-					flashcard2: flashcard2.deck
-				});
-				return false;
-			}
-			
-			// If we reach here, all fields, tags, and deck match
-			return true;
-			
-		} catch (error) {
-			console.warn('Error comparing HtmlFlashcards:', error);
-			// If comparison fails, assume it's changed to be safe
-			return false;
-		}
-	}
-
 
 	private validateFlashcard(flashcard: Flashcard): string | null {
 		// Check if note type exists in available note types
@@ -510,6 +462,7 @@ export class SyncConfirmationModal extends Modal {
 	private settings: { defaultDeck: string };
 	private vaultName: string;
 	private orphanedCardAction: 'delete' | 'import' = 'delete';
+	private diffRenderer: FlashcardDiffRenderer;
 
 	constructor(app: App, analysis: SyncAnalysis, ankiService: AnkiService, settings: { defaultDeck: string }) {
 		super(app);
@@ -517,6 +470,7 @@ export class SyncConfirmationModal extends Modal {
 		this.ankiService = ankiService;
 		this.settings = settings;
 		this.vaultName = app.vault.getName();
+		this.diffRenderer = new FlashcardDiffRenderer(app, settings.defaultDeck);
 	}
 
 	onOpen() {
@@ -566,8 +520,8 @@ export class SyncConfirmationModal extends Modal {
 			});
 		}
 		
-		if (this.analysis.unchangedFlashcards > 0) {
-			this.createExpandableStatSection(statsContainer, '✅ Unchanged', this.analysis.unchangedFlashcards, 'cards are up to date', 'sync-stat-unchanged', () => {
+		if (this.analysis.unchangedFlashcards.length > 0) {
+			this.createExpandableStatSection(statsContainer, '✅ Unchanged', this.analysis.unchangedFlashcards.length, 'cards are up to date', 'sync-stat-unchanged', () => {
 				return this.createUnchangedFlashcardsContent();
 			});
 		}
@@ -608,7 +562,7 @@ export class SyncConfirmationModal extends Modal {
 
 		// Show message if no flashcards found
 		const totalFlashcards = this.analysis.newFlashcards.length + this.analysis.changedFlashcards.length + 
-			this.analysis.unchangedFlashcards + this.analysis.invalidFlashcards.length;
+			this.analysis.unchangedFlashcards.length + this.analysis.invalidFlashcards.length;
 		if (totalFlashcards === 0) {
 			summarySection.createEl('p', { 
 				cls: 'sync-no-flashcards',
@@ -715,14 +669,15 @@ export class SyncConfirmationModal extends Modal {
 		
 		if (this.analysis.changedFlashcards.length > 0) {
 			console.group('📝 Changed Flashcards');
-			this.analysis.changedFlashcards.forEach(([ankiNote, flashcard], index) => {
-				console.log(`${index + 1}. ${flashcard.sourcePath}:${flashcard.lineStart}`, {
-					noteType: flashcard.noteType,
-					tags: flashcard.tags,
-					ankiId: flashcard.ankiId,
-					fields: Object.keys(flashcard.contentFields || {}),
-					obsidianData: flashcard,
-					ankiData: ankiNote
+			this.analysis.changedFlashcards.forEach((changedFlashcard, index) => {
+				console.log(`${index + 1}. ${changedFlashcard.flashcard.sourcePath}:${changedFlashcard.flashcard.lineStart}`, {
+					noteType: changedFlashcard.flashcard.noteType,
+					tags: changedFlashcard.flashcard.tags,
+					ankiId: changedFlashcard.flashcard.ankiId,
+					fields: Object.keys(changedFlashcard.flashcard.contentFields || {}),
+					obsidianData: changedFlashcard.flashcard,
+					ankiData: changedFlashcard.ankiNote,
+					diff: changedFlashcard.diff
 				});
 			});
 			console.groupEnd();
@@ -782,35 +737,34 @@ export class SyncConfirmationModal extends Modal {
 	private createNewFlashcardsContent(): HTMLElement {
 		const content = document.createElement('div');
 		
-		for (const flashcard of this.analysis.newFlashcards.slice(0, 5)) {
+		for (const flashcard of this.analysis.newFlashcards.slice(0, PREVIEW_ITEMS_LIMIT)) {
 			const item = this.createFlashcardItem(content, 'sync-flashcard-new');
 			this.addFileReference(item, flashcard);
 			
 			this.renderFlashcard(item, flashcard);
 		}
 		
-		this.addMoreItemsIndicator(content, this.analysis.newFlashcards.length, 5);
+		this.addMoreItemsIndicator(content, this.analysis.newFlashcards.length, PREVIEW_ITEMS_LIMIT);
 		return content;
 	}
 
 	private createChangedFlashcardsContent(): HTMLElement {
 		const content = document.createElement('div');
 		
-		for (const [ankiNote, flashcard] of this.analysis.changedFlashcards.slice(0, 3)) {
+		for (const changedFlashcard of this.analysis.changedFlashcards.slice(0, PREVIEW_ITEMS_LIMIT)) {
 			const item = this.createFlashcardItem(content, 'sync-flashcard-changed');
-			this.addFileReference(item, flashcard);
-			
-			this.renderFlashcardDiff(item, flashcard, ankiNote);
+			this.addFileReference(item, changedFlashcard.flashcard);
+			this.diffRenderer.render(item, changedFlashcard);
 		}
 		
-		this.addMoreItemsIndicator(content, this.analysis.changedFlashcards.length, 3);
+		this.addMoreItemsIndicator(content, this.analysis.changedFlashcards.length, PREVIEW_ITEMS_LIMIT);
 		return content;
 	}
 
 	private createInvalidFlashcardsContent(): HTMLElement {
 		const content = document.createElement('div');
 		
-		for (const flashcard of this.analysis.invalidFlashcards.slice(0, 5)) {
+		for (const flashcard of this.analysis.invalidFlashcards.slice(0, PREVIEW_ITEMS_LIMIT)) {
 			const item = this.createFlashcardItem(content, 'sync-flashcard-invalid');
 			this.addFileReference(item, flashcard);
 			
@@ -825,14 +779,14 @@ export class SyncConfirmationModal extends Modal {
 			});
 		}
 		
-		this.addMoreItemsIndicator(content, this.analysis.invalidFlashcards.length, 5);
+		this.addMoreItemsIndicator(content, this.analysis.invalidFlashcards.length, PREVIEW_ITEMS_LIMIT);
 		return content;
 	}
 
 	private createDeletedNotesContent(): HTMLElement {
 		const content = document.createElement('div');
 		
-		for (const ankiNote of this.analysis.deletedAnkiNotes.slice(0, 5)) {
+		for (const ankiNote of this.analysis.deletedAnkiNotes.slice(0, PREVIEW_ITEMS_LIMIT)) {
 			const item = this.createFlashcardItem(content, 'sync-flashcard-deleted');
 			const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote);
 			
@@ -840,23 +794,15 @@ export class SyncConfirmationModal extends Modal {
 			const idRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
 			
 			if (ankiAsHtmlFlashcard.sourcePath) {
-				const fileLink = idRef.createEl('a', { 
-					cls: 'sync-flashcard-file sync-flashcard-file-link',
-					text: ankiAsHtmlFlashcard.sourcePath,
-					href: '#'
-				});
-				fileLink.addEventListener('click', (e) => {
-					e.preventDefault();
-					this.app.workspace.openLinkText(ankiAsHtmlFlashcard.sourcePath, '', false);
-				});
+				this.createFileReference(idRef, ankiAsHtmlFlashcard.sourcePath, ankiAsHtmlFlashcard.lineStart);
 				idRef.createEl('span', { 
 					cls: 'sync-flashcard-anki-id',
 					text: ` (Anki ID: ${ankiNote.noteId})`
 				});
 			} else {
 				idRef.createEl('span', { 
-					cls: 'sync-flashcard-file',
-					text: `Anki Note ID: ${ankiNote.noteId}`
+					cls: 'sync-flashcard-anki-id',
+					text: `Anki ID: ${ankiNote.noteId} (no source file)`
 				});
 			}
 			
@@ -866,14 +812,14 @@ export class SyncConfirmationModal extends Modal {
 			renderer.onload();
 		}
 		
-		this.addMoreItemsIndicator(content, this.analysis.deletedAnkiNotes.length, 5);
+		this.addMoreItemsIndicator(content, this.analysis.deletedAnkiNotes.length, PREVIEW_ITEMS_LIMIT);
 		return content;
 	}
 
 	private createMediaChangesContent(): HTMLElement {
 		const content = document.createElement('div');
 		
-		for (const mediaItem of this.analysis.unsyncedMediaItems.slice(0, 10)) {
+		for (const mediaItem of this.analysis.unsyncedMediaItems.slice(0, PREVIEW_ITEMS_LIMIT)) {
 			const item = this.createFlashcardItem(content, 'sync-flashcard-media');
 			
 			// Create clickable file link
@@ -903,18 +849,21 @@ export class SyncConfirmationModal extends Modal {
 			});
 		}
 		
-		this.addMoreItemsIndicator(content, this.analysis.unsyncedMediaItems.length, 10);
+		this.addMoreItemsIndicator(content, this.analysis.unsyncedMediaItems.length, PREVIEW_ITEMS_LIMIT);
 		return content;
 	}
 
 	private createUnchangedFlashcardsContent(): HTMLElement {
 		const content = document.createElement('div');
 		
-		const summary = content.createEl('div', { cls: 'sync-flashcard-item sync-flashcard-unchanged' });
-		summary.createEl('div', { 
-			cls: 'sync-flashcard-info',
-			text: `${this.analysis.unchangedFlashcards} flashcards are unchanged and will not be synced.`
-		});
+		// Show unchanged flashcards with links
+		for (const flashcard of this.analysis.unchangedFlashcards.slice(0, PREVIEW_ITEMS_LIMIT)) {
+			const item = this.createFlashcardItem(content, 'sync-flashcard-unchanged');
+			this.addFileReference(item, flashcard);
+		}
+		
+		// Show summary if there are more than the limit
+		this.addMoreItemsIndicator(content, this.analysis.unchangedFlashcards.length, PREVIEW_ITEMS_LIMIT);
 		
 		return content;
 	}
@@ -926,7 +875,7 @@ export class SyncConfirmationModal extends Modal {
 
 	private addFileReference(item: HTMLElement, flashcard: FlashcardBlock) {
 		const fileRef = item.createEl('div', { cls: 'sync-flashcard-file-ref' });
-		this.createFileReference(fileRef, flashcard);
+		this.createFileReference(fileRef, flashcard.sourcePath, flashcard.lineStart);
 	}
 
 	private addMoreItemsIndicator(section: HTMLElement, totalCount: number, displayCount: number) {
@@ -938,80 +887,27 @@ export class SyncConfirmationModal extends Modal {
 		}
 	}
 
-	private createFileReference(container: HTMLElement, flashcard: FlashcardBlock) {
+	private createFileReference(container: HTMLElement, sourcePath: string, lineStart?: number) {
+		const displayText = lineStart ? `${sourcePath}:${lineStart}` : sourcePath;
 		const fileLink = container.createEl('a', { 
 			cls: 'sync-file-link',
-			text: `${flashcard.sourcePath}:${flashcard.lineStart}`
+			text: displayText
 		});
 		
-		fileLink.addEventListener('click', (e) => {
+		fileLink.addEventListener('click', async (e) => {
 			e.preventDefault();
-			this.navigateToFile(flashcard.sourcePath, flashcard.lineStart);
+			const success = await navigateToFile(this.app, sourcePath, lineStart || 1);
+			if (success) {
+				this.close();
+			}
 		});
 	}
 
-	private navigateToFile(filePath: string, lineNumber: number) {
-		// Use Obsidian's workspace to open the file at specific line
-		const file = this.app.vault.getAbstractFileByPath(filePath);
-		if (file) {
-			this.app.workspace.openLinkText(filePath, '', true).then(() => {
-				// Try to navigate to the specific line
-				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (activeView) {
-					const editor = activeView.editor;
-					// Convert to 0-based line number for editor
-					const targetLine = Math.max(0, lineNumber - 1);
-					editor.setCursor(targetLine, 0);
-					editor.scrollIntoView({ from: { line: targetLine, ch: 0 }, to: { line: targetLine, ch: 0 } }, true);
-				}
-			});
-		}
-		
-		// Close the modal after navigation
-		this.close();
-	}
 
 	private renderFlashcard(container: HTMLElement, flashcard: Flashcard) {
 		const flashcardContainer = container.createEl('div');
 		const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
 		const renderer = new FlashcardRenderer(flashcardContainer, htmlFlashcard, this.settings.defaultDeck, this.app);
 		renderer.onload()
-	}
-
-	private renderFlashcardDiff(container: HTMLElement, obsidian: Flashcard, ankiNote: AnkiNote) {
-		const diffContainer = container.createEl('div', { cls: 'sync-diff-container' });
-		
-		// Header
-		const header = diffContainer.createEl('div', { cls: 'sync-diff-header' });
-		header.createEl('span', { 
-			cls: 'sync-diff-title',
-			text: `${obsidian.noteType} (ID: ${obsidian.ankiId})`
-		});
-		
-		// Side-by-side diff
-		const diffContent = diffContainer.createEl('div', { cls: 'sync-diff-content' });
-		
-		// Anki version (old - red border)
-		const ankiSide = diffContent.createEl('div', { cls: 'sync-diff-side sync-diff-anki' });
-		ankiSide.createEl('h5', { text: 'Anki Version (Current)' });
-		const ankiContainer = ankiSide.createEl('div', { cls: 'sync-diff-flashcard-container sync-diff-old' });
-		
-		// Obsidian version (new - green border)  
-		const obsidianSide = diffContent.createEl('div', { cls: 'sync-diff-side sync-diff-obsidian' });
-		obsidianSide.createEl('h5', { text: 'Obsidian Version (New)' });
-		const obsidianContainer = obsidianSide.createEl('div', { cls: 'sync-diff-flashcard-container sync-diff-new' });
-		
-		// Convert Anki note to HtmlFlashcard format (already HTML)
-		const ankiAsHtmlFlashcard = this.ankiService.toHtmlFlashcard(ankiNote);
-		
-		// Convert Obsidian flashcard to HTML format
-		const obsidianAsHtmlFlashcard = MarkdownService.toHtmlFlashcard(obsidian, this.vaultName);
-		
-		// Render both versions using the existing FlashcardRenderer
-		const ankiRenderer = new FlashcardRenderer(ankiContainer, ankiAsHtmlFlashcard, this.settings.defaultDeck, this.app);
-		ankiRenderer.onload();
-		
-		const obsidianRenderer = new FlashcardRenderer(obsidianContainer, obsidianAsHtmlFlashcard, this.settings.defaultDeck, this.app);
-		obsidianRenderer.onload();
 	}
 }

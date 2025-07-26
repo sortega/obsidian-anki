@@ -1,9 +1,10 @@
-import {App, MarkdownView, Modal, Notice, TFile} from 'obsidian';
+import {App, Modal, Notice, TFile} from 'obsidian';
 import {AnkiNote, AnkiService, MediaItem} from './anki-service';
 import {Flashcard} from './flashcard';
 import {SyncAnalysis} from './sync-analysis';
 import {MarkdownService} from './markdown-service';
 import {DEFAULT_IMPORT_FILE} from './constants';
+import {navigateToFile} from './navigation-utils';
 import * as yaml from 'js-yaml';
 
 export interface OperationResult {
@@ -52,38 +53,38 @@ export class SyncExecutionModal extends Modal {
 	}
 
 	onOpen() {
-		const { contentEl } = this;
+		const {contentEl} = this;
 		contentEl.empty();
 
 		// Modal title
-		contentEl.createEl('h2', { text: 'Syncing to Anki' });
+		contentEl.createEl('h2', {text: 'Syncing to Anki'});
 
 		// Progress section
-		const progressSection = contentEl.createEl('div', { cls: 'sync-progress-section' });
-		
+		const progressSection = contentEl.createEl('div', {cls: 'sync-progress-section'});
+
 		// Progress text
-		this.progressText = progressSection.createEl('div', { 
+		this.progressText = progressSection.createEl('div', {
 			cls: 'sync-progress-text',
 			text: 'Starting sync...'
 		});
 
 		// Progress bar container
-		const progressContainer = progressSection.createEl('div', { cls: 'sync-progress-container' });
-		this.progressBar = progressContainer.createEl('div', { cls: 'sync-progress-bar' });
+		const progressContainer = progressSection.createEl('div', {cls: 'sync-progress-container'});
+		this.progressBar = progressContainer.createEl('div', {cls: 'sync-progress-bar'});
 
 		// Status text
-		this.statusText = progressSection.createEl('div', { 
+		this.statusText = progressSection.createEl('div', {
 			cls: 'sync-status-text',
 			text: 'Preparing to sync...'
 		});
 
 		// Success/Failure counters
-		const countersSection = progressSection.createEl('div', { cls: 'sync-counters' });
-		this.successCountText = countersSection.createEl('div', { 
+		const countersSection = progressSection.createEl('div', {cls: 'sync-counters'});
+		this.successCountText = countersSection.createEl('div', {
 			cls: 'sync-counter sync-counter-success',
 			text: '✅ Successful: 0'
 		});
-		this.failureCountText = countersSection.createEl('div', { 
+		this.failureCountText = countersSection.createEl('div', {
 			cls: 'sync-counter sync-counter-failure',
 			text: '❌ Failed: 0'
 		});
@@ -93,17 +94,17 @@ export class SyncExecutionModal extends Modal {
 	}
 
 	onClose() {
-		const { contentEl } = this;
+		const {contentEl} = this;
 		contentEl.empty();
 	}
 
 	private async executeSync() {
 		try {
 			let completed = 0;
-			const totalOperations = this.analysis.newFlashcards.length + 
-								   this.analysis.changedFlashcards.length + 
-								   this.analysis.deletedAnkiNotes.length +
-								   this.analysis.unsyncedMediaItems.length;
+			const totalOperations = this.analysis.newFlashcards.length +
+				this.analysis.changedFlashcards.length +
+				this.analysis.deletedAnkiNotes.length +
+				this.analysis.unsyncedMediaItems.length;
 
 			// Initialize results tracking
 			this.results = {
@@ -123,12 +124,12 @@ export class SyncExecutionModal extends Modal {
 			for (const flashcard of this.analysis.newFlashcards) {
 				try {
 					this.updateProgress(completed / totalOperations, `Creating: ${flashcard.sourcePath}:${flashcard.lineStart}`);
-					
+
 					// Convert markdown fields to HTML
 					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
 					const noteId = await this.ankiService.createNote(htmlFlashcard, this.analysis.mediaItems);
-					createdNoteIds.push({ flashcard, noteId });
-					
+					createdNoteIds.push({flashcard, noteId});
+
 					// Track successful operation
 					this.results.successfulOperations.push({
 						flashcard,
@@ -137,7 +138,7 @@ export class SyncExecutionModal extends Modal {
 						operation: 'create'
 					});
 					this.updateCounters();
-					
+
 					console.log(`✅ Created note ${noteId} for ${flashcard.sourcePath}:${flashcard.lineStart}`);
 				} catch (error) {
 					// Track failed operation with user-friendly error
@@ -148,51 +149,51 @@ export class SyncExecutionModal extends Modal {
 						operation: 'create'
 					});
 					this.updateCounters();
-					
+
 					console.error(`❌ Failed to create note for ${flashcard.sourcePath}:${flashcard.lineStart}:`, error);
 				}
 				completed++;
 			}
 
 			// Update changed flashcards
-			for (const [ankiNote, flashcard] of this.analysis.changedFlashcards) {
+			for (const changedFlashcard of this.analysis.changedFlashcards) {
 				try {
-					this.updateProgress(completed / totalOperations, `Updating: ${flashcard.sourcePath}:${flashcard.lineStart}`);
-					
-					// Convert markdown fields to HTML
-					const htmlFlashcard = MarkdownService.toHtmlFlashcard(flashcard, this.vaultName);
-					
+					this.updateProgress(completed / totalOperations, `Updating: ${changedFlashcard.flashcard.sourcePath}:${changedFlashcard.flashcard.lineStart}`);
+
 					// Update note content
-					await this.ankiService.updateNote(ankiNote.noteId, htmlFlashcard, this.analysis.mediaItems);
-					
-					// Check if deck has changed and move card if needed
-					if (ankiNote.deckNames.size > 1 || !ankiNote.deckNames.has(htmlFlashcard.deck)) {
-						await this.ankiService.moveCard(ankiNote.noteId, htmlFlashcard.deck);
-						console.log(`📦 Moved card ${ankiNote.noteId} from '${ankiNote.deckNames}' to '${htmlFlashcard.deck}'`);
+					await this.ankiService.updateNote(changedFlashcard.ankiNote.noteId, changedFlashcard.htmlFlashcard, this.analysis.mediaItems);
+
+					// Check if the deck has changed and move the cards if needed
+					if (
+						changedFlashcard.ankiNote.deckNames.size > 1 ||
+						!changedFlashcard.ankiNote.deckNames.has(changedFlashcard.htmlFlashcard.deck)
+					) {
+						await this.ankiService.moveCard(changedFlashcard.ankiNote.noteId, changedFlashcard.htmlFlashcard.deck);
+						console.log(`📦 Moved cards of ${changedFlashcard.ankiNote.noteId} to '${changedFlashcard.htmlFlashcard.deck}'`);
 					}
-					
+
 					// Track successful operation
 					this.results.successfulOperations.push({
-						flashcard,
+						flashcard: changedFlashcard.flashcard,
 						success: true,
-						noteId: ankiNote.noteId,
+						noteId: changedFlashcard.ankiNote.noteId,
 						operation: 'update'
 					});
 					this.updateCounters();
-					
-					console.log(`✅ Updated note ${ankiNote.noteId} for ${flashcard.sourcePath}:${flashcard.lineStart}`);
+
+					console.log(`✅ Updated note ${changedFlashcard.ankiNote.noteId} for ${changedFlashcard.flashcard.sourcePath}:${changedFlashcard.flashcard.lineStart}`);
 				} catch (error) {
 					// Track failed operation with user-friendly error
 					this.results.failedOperations.push({
-						flashcard,
+						flashcard: changedFlashcard.flashcard,
 						success: false,
 						error: this.parseUserFriendlyError(error, 'update'),
-						noteId: ankiNote.noteId,
+						noteId: changedFlashcard.ankiNote.noteId,
 						operation: 'update'
 					});
 					this.updateCounters();
-					
-					console.error(`❌ Failed to update note ${ankiNote.noteId}:`, error);
+
+					console.error(`❌ Failed to update note ${changedFlashcard.ankiNote.noteId}:`, error);
 				}
 				completed++;
 			}
@@ -223,9 +224,9 @@ export class SyncExecutionModal extends Modal {
 			this.results.endTime = new Date();
 			const mediaFailures = this.results.mediaOperations.filter(op => !op.success);
 			this.results.isPartialSuccess = this.results.failedOperations.length > 0 || mediaFailures.length > 0;
-			
+
 			this.updateProgress(1, 'Sync complete!');
-			
+
 			// Show results based on success/failure
 			if (this.results.failedOperations.length === 0 && mediaFailures.length === 0) {
 				// Complete success
@@ -235,7 +236,7 @@ export class SyncExecutionModal extends Modal {
 					`• Updated: ${this.results.successfulOperations.filter(op => op.operation === 'update').length} flashcards\n` +
 					`• Deleted: ${this.results.successfulOperations.filter(op => op.operation === 'delete').length} flashcards` +
 					(mediaCount > 0 ? `\n• Media: ${mediaCount} files synced` : '');
-				
+
 				new Notice(successMessage);
 				setTimeout(() => this.close(), 2000);
 			} else {
@@ -253,10 +254,10 @@ export class SyncExecutionModal extends Modal {
 	private async handleDeleteOrphanedCards(completed: number, totalOperations: number) {
 		try {
 			this.updateProgress(completed / totalOperations, `Deleting ${this.analysis.deletedAnkiNotes.length} orphaned notes...`);
-			
+
 			const noteIds = this.analysis.deletedAnkiNotes.map(note => note.noteId);
 			await this.ankiService.deleteNotes(noteIds);
-			
+
 			// Track successful delete operations
 			for (const deletedNote of this.analysis.deletedAnkiNotes) {
 				const flashcardForTracking: Flashcard = {
@@ -270,7 +271,7 @@ export class SyncExecutionModal extends Modal {
 					warnings: [],
 					deck: deletedNote.deckNames[Symbol.iterator]().next().value
 				};
-				
+
 				this.results.successfulOperations.push({
 					flashcard: flashcardForTracking,
 					success: true,
@@ -279,7 +280,7 @@ export class SyncExecutionModal extends Modal {
 				});
 			}
 			this.updateCounters();
-			
+
 			console.log(`✅ Deleted ${noteIds.length} orphaned notes:`, noteIds);
 		} catch (error) {
 			// Track failed delete operations
@@ -295,7 +296,7 @@ export class SyncExecutionModal extends Modal {
 					warnings: [],
 					deck: deletedNote.deckNames[Symbol.iterator]().next().value
 				};
-				
+
 				this.results.failedOperations.push({
 					flashcard: flashcardForTracking,
 					success: false,
@@ -305,18 +306,18 @@ export class SyncExecutionModal extends Modal {
 				});
 			}
 			this.updateCounters();
-			
+
 			console.error(`❌ Failed to delete orphaned notes:`, error);
 		}
 	}
 
 	private async handleImportOrphanedCards(completed: number, totalOperations: number) {
 		this.updateProgress(completed / totalOperations, `Importing ${this.analysis.deletedAnkiNotes.length} orphaned cards...`);
-		
+
 		for (const orphanedNote of this.analysis.deletedAnkiNotes) {
 			try {
 				await this.importOrphanedCard(orphanedNote);
-				
+
 				// Track successful import operation
 				const flashcardForTracking: Flashcard = {
 					sourcePath: '',
@@ -329,7 +330,7 @@ export class SyncExecutionModal extends Modal {
 					warnings: [],
 					deck: orphanedNote.deckNames[Symbol.iterator]().next().value
 				};
-				
+
 				this.results.successfulOperations.push({
 					flashcard: flashcardForTracking,
 					success: true,
@@ -350,7 +351,7 @@ export class SyncExecutionModal extends Modal {
 					warnings: [],
 					deck: orphanedNote.deckNames[Symbol.iterator]().next().value
 				};
-				
+
 				this.results.failedOperations.push({
 					flashcard: flashcardForTracking,
 					success: false,
@@ -359,7 +360,7 @@ export class SyncExecutionModal extends Modal {
 					operation: 'create'
 				});
 				this.updateCounters();
-				
+
 				console.error(`❌ Failed to import orphaned note ${orphanedNote.noteId}:`, error);
 			}
 		}
@@ -367,7 +368,7 @@ export class SyncExecutionModal extends Modal {
 
 	private async syncMediaFiles(completed: number, totalOperations: number) {
 		this.updateProgress(completed / totalOperations, `Syncing ${this.analysis.unsyncedMediaItems.length} media files...`);
-		
+
 		for (let i = 0; i < this.analysis.unsyncedMediaItems.length; i++) {
 			const mediaItem = this.analysis.unsyncedMediaItems[i];
 			const progressPercent = completed + i;
@@ -376,14 +377,14 @@ export class SyncExecutionModal extends Modal {
 			try {
 				// Store media file in Anki - the service handles filename generation internally
 				const ankiFilename = await this.ankiService.storeMediaFile(mediaItem);
-				
+
 				// Track successful operation
 				this.results.mediaOperations.push({
 					mediaItem,
 					success: true,
 					ankiFilename
 				});
-				
+
 				console.log(`✅ Synced media file: ${mediaItem.sourcePath} → ${ankiFilename}`);
 			} catch (error) {
 				// Track failed operation
@@ -392,7 +393,7 @@ export class SyncExecutionModal extends Modal {
 					success: false,
 					error: error instanceof Error ? error.message : String(error)
 				});
-				
+
 				console.error(`❌ Failed to sync media file ${mediaItem.sourcePath}:`, error);
 			}
 		}
@@ -400,7 +401,7 @@ export class SyncExecutionModal extends Modal {
 
 	private async updateObsidianFiles(createdNoteIds: Array<{ flashcard: Flashcard, noteId: number }>) {
 		const fileUpdates = new Map<string, Array<{ flashcard: Flashcard, noteId: number }>>();
-		
+
 		// Group by file path
 		for (const item of createdNoteIds) {
 			const filePath = item.flashcard.sourcePath;
@@ -425,7 +426,7 @@ export class SyncExecutionModal extends Modal {
 				// Sort by line number descending to avoid line number shifts
 				items.sort((a, b) => b.flashcard.lineStart - a.flashcard.lineStart);
 
-				for (const { flashcard, noteId } of items) {
+				for (const {flashcard, noteId} of items) {
 					updatedContent = this.addAnkiIdToFlashcard(updatedContent, flashcard, noteId);
 				}
 
@@ -442,11 +443,11 @@ export class SyncExecutionModal extends Modal {
 
 	private addAnkiIdToFlashcard(content: string, flashcard: Flashcard, noteId: number): string {
 		const lines = content.split('\n');
-		
+
 		// Find the flashcard block
 		let blockStart = -1;
 		let blockEnd = -1;
-		
+
 		for (let i = 0; i < lines.length; i++) {
 			if (lines[i].trim() === '```flashcard') {
 				blockStart = i;
@@ -457,31 +458,31 @@ export class SyncExecutionModal extends Modal {
 						break;
 					}
 				}
-				
+
 				// Check if this is the right block by line number (approximate match)
 				if (blockStart + 1 >= flashcard.lineStart - 2 && blockStart + 1 <= flashcard.lineStart + 2) {
 					break;
 				}
 			}
 		}
-		
+
 		if (blockStart === -1 || blockEnd === -1) {
 			console.warn(`Could not find flashcard block at line ${flashcard.lineStart} in ${flashcard.sourcePath}`);
 			return content;
 		}
-		
+
 		// Parse the YAML content and add ankiId
 		const yamlLines = lines.slice(blockStart + 1, blockEnd);
 		const yamlContent = yamlLines.join('\n');
-		
+
 		try {
 			// Add ankiId to the YAML content
 			const updatedYaml = this.upsertAnkiIdInYaml(yamlContent, noteId);
-			
+
 			// Replace the lines
 			const newLines = [...lines];
 			newLines.splice(blockStart + 1, blockEnd - blockStart - 1, ...updatedYaml.split('\n'));
-			
+
 			return newLines.join('\n');
 		} catch (error) {
 			console.warn(`Failed to parse YAML for ${flashcard.sourcePath}:${flashcard.lineStart}:`, error);
@@ -492,38 +493,38 @@ export class SyncExecutionModal extends Modal {
 	private async importOrphanedCard(orphanedNote: AnkiNote) {
 		// Convert AnkiNote to Flashcard using the AnkiService
 		const flashcard = this.ankiService.convertOrphanedNoteToFlashcard(orphanedNote);
-		
+
 		// Determine target file and ensure .md extension is added if not present
 		let targetFilePath = flashcard.sourcePath || DEFAULT_IMPORT_FILE;
 		if (!targetFilePath.endsWith('.md')) {
 			targetFilePath = targetFilePath + '.md';
 		}
-		
+
 		// Convert flashcard to YAML format
 		const flashcardYaml = this.convertFlashcardToYaml(flashcard);
-		
+
 		// Append to target file
 		await this.appendFlashcardToFile(targetFilePath, flashcardYaml);
-		
+
 		console.log(`✅ Imported orphaned card ${orphanedNote.noteId} to ${targetFilePath}`, flashcard);
 	}
-	
+
 	private convertFlashcardToYaml(flashcard: Flashcard): string {
 		const yamlData: any = {
 			NoteType: flashcard.noteType,
 			AnkiId: flashcard.ankiId
 		};
-		
+
 		// Add field content (already converted to markdown by AnkiService)
 		for (const [fieldName, fieldValue] of Object.entries(flashcard.contentFields)) {
 			yamlData[fieldName] = fieldValue;
 		}
-		
+
 		// Add tags if present
 		if (flashcard.tags.length > 0) {
 			yamlData.Tags = flashcard.tags;
 		}
-		
+
 		return yaml.dump(yamlData, {
 			indent: 2,
 			lineWidth: -1,
@@ -531,27 +532,27 @@ export class SyncExecutionModal extends Modal {
 			sortKeys: false
 		});
 	}
-	
+
 	private async appendFlashcardToFile(filePath: string, flashcardYaml: string) {
 		let file = this.app.vault.getAbstractFileByPath(filePath);
-		
+
 		// Create file if it doesn't exist
 		if (!file) {
 			await this.app.vault.create(filePath, '# Imported Flashcards\n\n');
 			file = this.app.vault.getAbstractFileByPath(filePath);
 		}
-		
+
 		if (!(file instanceof TFile)) {
 			throw new Error(`Could not create or access file: ${filePath}`);
 		}
-		
+
 		// Read current content
 		const currentContent = await this.app.vault.read(file);
-		
+
 		// Append the flashcard block
-		const newContent = currentContent + (currentContent.endsWith('\n') ? '' : '\n') + 
+		const newContent = currentContent + (currentContent.endsWith('\n') ? '' : '\n') +
 			`\n\`\`\`flashcard\n${flashcardYaml.trim()}\n\`\`\`\n`;
-		
+
 		// Write back to file
 		await this.app.vault.modify(file, newContent);
 	}
@@ -577,28 +578,28 @@ export class SyncExecutionModal extends Modal {
 	private updateCounters() {
 		const successCount = this.results.successfulOperations.length;
 		const failureCount = this.results.failedOperations.length;
-		
+
 		this.successCountText.setText(`✅ Successful: ${successCount}`);
 		this.failureCountText.setText(`❌ Failed: ${failureCount}`);
 	}
 
 	private showDetailedResults() {
 		// Replace current content with detailed results
-		const { contentEl } = this;
+		const {contentEl} = this;
 		contentEl.empty();
 
 		// Modal title
-		contentEl.createEl('h2', { text: 'Sync Results' });
+		contentEl.createEl('h2', {text: 'Sync Results'});
 
 		// Summary section
-		const summarySection = contentEl.createEl('div', { cls: 'sync-results-summary' });
-		
+		const summarySection = contentEl.createEl('div', {cls: 'sync-results-summary'});
+
 		const totalOps = this.results.successfulOperations.length + this.results.failedOperations.length;
 		const successRate = totalOps > 0 ? Math.round((this.results.successfulOperations.length / totalOps) * 100) : 0;
-		
-		summarySection.createEl('div', { 
+
+		summarySection.createEl('div', {
 			cls: `sync-result-item ${this.results.isPartialSuccess ? 'sync-result-warning' : 'sync-result-success'}`,
-			text: this.results.isPartialSuccess 
+			text: this.results.isPartialSuccess
 				? `⚠️ Partial Success: ${successRate}% (${this.results.successfulOperations.length}/${totalOps})`
 				: `✅ Complete Success: ${this.results.successfulOperations.length} operations`
 		});
@@ -625,9 +626,9 @@ export class SyncExecutionModal extends Modal {
 		}
 
 		// Action buttons
-		const buttonContainer = contentEl.createEl('div', { cls: 'sync-button-container' });
-		
-		const closeButton = buttonContainer.createEl('button', { 
+		const buttonContainer = contentEl.createEl('div', {cls: 'sync-button-container'});
+
+		const closeButton = buttonContainer.createEl('button', {
 			text: 'Close',
 			cls: 'mod-cta'
 		});
@@ -636,10 +637,10 @@ export class SyncExecutionModal extends Modal {
 	}
 
 	private createResultSection(container: HTMLElement, title: string, operations: OperationResult[], type: 'success' | 'failure') {
-		const details = container.createEl('details', { cls: `sync-result-section sync-result-${type}` });
-		const summary = details.createEl('summary', { cls: 'sync-result-summary' });
-		
-		summary.createEl('span', { 
+		const details = container.createEl('details', {cls: `sync-result-section sync-result-${type}`});
+		const summary = details.createEl('summary', {cls: 'sync-result-summary'});
+
+		summary.createEl('span', {
 			cls: 'sync-result-title',
 			text: `${title} (${operations.length})`
 		});
@@ -647,25 +648,25 @@ export class SyncExecutionModal extends Modal {
 		// Lazy load content when expanded
 		details.addEventListener('toggle', () => {
 			if (details.open && !details.querySelector('.sync-result-content')) {
-				const content = details.createEl('div', { cls: 'sync-result-content' });
-				
+				const content = details.createEl('div', {cls: 'sync-result-content'});
+
 				for (const operation of operations.slice(0, 10)) {
-					const item = content.createEl('div', { cls: 'sync-result-item' });
-					
+					const item = content.createEl('div', {cls: 'sync-result-item'});
+
 					const icon = operation.operation === 'create' ? '➕' : operation.operation === 'update' ? '📝' : '🗑️';
-					const locationDiv = item.createEl('div', { cls: 'sync-result-location' });
-					
-					locationDiv.createEl('span', { text: `${icon} ` });
-					
+					const locationDiv = item.createEl('div', {cls: 'sync-result-location'});
+
+					locationDiv.createEl('span', {text: `${icon} `});
+
 					if (operation.flashcard.sourcePath) {
 						// Create clickable file link
 						this.createFileLink(locationDiv, operation.flashcard.sourcePath, operation.flashcard.lineStart);
 					} else {
-						locationDiv.createEl('span', { text: `Anki Note ${operation.noteId}` });
+						locationDiv.createEl('span', {text: `Anki Note ${operation.noteId}`});
 					}
 
 					if (!operation.success && operation.error) {
-						item.createEl('div', { 
+						item.createEl('div', {
 							cls: 'sync-result-error',
 							text: operation.error
 						});
@@ -673,7 +674,7 @@ export class SyncExecutionModal extends Modal {
 				}
 
 				if (operations.length > 10) {
-					content.createEl('div', { 
+					content.createEl('div', {
 						cls: 'sync-more-items',
 						text: `... and ${operations.length - 10} more`
 					});
@@ -683,10 +684,10 @@ export class SyncExecutionModal extends Modal {
 	}
 
 	private createMediaResultSection(container: HTMLElement, title: string, operations: MediaOperationResult[], type: 'success' | 'failure') {
-		const details = container.createEl('details', { cls: `sync-result-section sync-result-${type}` });
-		const summary = details.createEl('summary', { cls: 'sync-result-summary' });
-		
-		summary.createEl('span', { 
+		const details = container.createEl('details', {cls: `sync-result-section sync-result-${type}`});
+		const summary = details.createEl('summary', {cls: 'sync-result-summary'});
+
+		summary.createEl('span', {
 			cls: 'sync-result-title',
 			text: `${title} (${operations.length})`
 		});
@@ -694,23 +695,23 @@ export class SyncExecutionModal extends Modal {
 		// Lazy load content when expanded
 		details.addEventListener('toggle', () => {
 			if (details.open && !details.querySelector('.sync-result-content')) {
-				const content = details.createEl('div', { cls: 'sync-result-content' });
-				
+				const content = details.createEl('div', {cls: 'sync-result-content'});
+
 				for (const operation of operations.slice(0, 10)) {
-					const item = content.createEl('div', { cls: 'sync-result-item' });
-					
-					const locationDiv = item.createEl('div', { cls: 'sync-result-location' });
-					locationDiv.createEl('span', { text: `📁 ${operation.mediaItem.sourcePath}` });
-					
+					const item = content.createEl('div', {cls: 'sync-result-item'});
+
+					const locationDiv = item.createEl('div', {cls: 'sync-result-location'});
+					locationDiv.createEl('span', {text: `📁 ${operation.mediaItem.sourcePath}`});
+
 					if (operation.success && operation.ankiFilename) {
-						item.createEl('div', { 
+						item.createEl('div', {
 							cls: 'sync-result-anki-filename',
 							text: `→ ${operation.ankiFilename}`
 						});
 					}
 
 					if (!operation.success && operation.error) {
-						item.createEl('div', { 
+						item.createEl('div', {
 							cls: 'sync-result-error',
 							text: operation.error
 						});
@@ -718,7 +719,7 @@ export class SyncExecutionModal extends Modal {
 				}
 
 				if (operations.length > 10) {
-					content.createEl('div', { 
+					content.createEl('div', {
 						cls: 'sync-more-items',
 						text: `... and ${operations.length - 10} more`
 					});
@@ -728,77 +729,60 @@ export class SyncExecutionModal extends Modal {
 	}
 
 	private createFileLink(container: HTMLElement, filePath: string, lineNumber: number) {
-		const fileLink = container.createEl('a', { 
+		const fileLink = container.createEl('a', {
 			cls: 'sync-result-file-link',
 			text: `${filePath}:${lineNumber}`
 		});
-		
-		fileLink.addEventListener('click', (e) => {
+
+		fileLink.addEventListener('click', async (e) => {
 			e.preventDefault();
-			this.navigateToFile(filePath, lineNumber);
+			const success = await navigateToFile(this.app, filePath, lineNumber);
+			if (success) {
+				this.close();
+			}
 		});
 	}
 
-	private navigateToFile(filePath: string, lineNumber: number) {
-		// Use Obsidian's workspace to open the file at specific line
-		const file = this.app.vault.getAbstractFileByPath(filePath);
-		if (file) {
-			this.app.workspace.openLinkText(filePath, '', true).then(() => {
-				// Try to navigate to the specific line
-				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (activeView) {
-					const editor = activeView.editor;
-					// Convert to 0-based line number for editor
-					const targetLine = Math.max(0, lineNumber - 1);
-					editor.setCursor(targetLine, 0);
-					editor.scrollIntoView({ from: { line: targetLine, ch: 0 }, to: { line: targetLine, ch: 0 } }, true);
-				}
-			});
-		}
-		
-		// Close the modal after navigation
-		this.close();
-	}
 
 	private parseUserFriendlyError(error: unknown, operation: 'create' | 'update' | 'delete'): string {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		const lowerError = errorMessage.toLowerCase();
-		
+
 		// Parse common Anki error patterns
 		if (lowerError.includes('duplicate') || lowerError.includes('already exists')) {
 			if (operation === 'create') {
 				return 'Card already exists in Anki. Try refreshing the sync or check for duplicate content.';
 			}
 		}
-		
+
 		if (lowerError.includes('connection') || lowerError.includes('network') || lowerError.includes('timeout')) {
 			return 'Connection to Anki lost. Make sure Anki is running and AnkiConnect is installed.';
 		}
-		
+
 		if (lowerError.includes('permission') || lowerError.includes('access denied')) {
 			return 'Permission denied. Check Anki and AnkiConnect permissions.';
 		}
-		
+
 		if (lowerError.includes('model') || lowerError.includes('note type')) {
 			return 'Note type not found in Anki. Refresh your connection or recreate the note type.';
 		}
-		
+
 		if (lowerError.includes('deck')) {
 			return 'Deck not found in Anki. Check your default deck setting.';
 		}
-		
+
 		if (lowerError.includes('field')) {
 			return 'Invalid field configuration. Check that all fields match the note type in Anki.';
 		}
-		
+
 		if (lowerError.includes('not found') && operation === 'update') {
 			return 'Note no longer exists in Anki. It may have been deleted manually.';
 		}
-		
+
 		if (lowerError.includes('not found') && operation === 'delete') {
 			return 'Note already deleted from Anki.';
 		}
-		
+
 		// Return original error if no pattern matches, but make it more user-friendly
 		return `${operation === 'create' ? 'Creation' : operation === 'update' ? 'Update' : 'Deletion'} failed: ${errorMessage}`;
 	}

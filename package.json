@@ -19,12 +19,14 @@
 		"@types/marked": "^5.0.2",
 		"@types/turndown": "^5.0.5",
 		"crypto-js": "^4.2.0",
+		"diff": "^8.0.2",
 		"js-yaml": "^4.1.0",
 		"marked": "^15.0.12",
 		"turndown": "^7.2.0",
 		"yanki-connect": "^1.0.0"
 	},
 	"devDependencies": {
+		"@types/diff": "^7.0.2",
 		"@types/jest": "^30.0.0",
 		"@types/js-yaml": "^4.0.9",
 		"@types/jsdom": "^21.1.7",
