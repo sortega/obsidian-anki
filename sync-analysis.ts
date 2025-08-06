@@ -493,19 +493,19 @@ export class SyncConfirmationModal extends Modal {
 		
 		// Create expandable statistics sections directly in the stats container
 		if (this.analysis.newFlashcards.length > 0) {
-			this.createExpandableStatSection(statsContainer, '➕ New', this.analysis.newFlashcards.length, 'cards will be created', 'sync-stat-new', () => {
+			this.createExpandableStatSection(statsContainer, '➕ New', this.analysis.newFlashcards.length, 'sync-stat-new', () => {
 				return this.createNewFlashcardsContent();
 			});
 		}
 		
 		if (this.analysis.changedFlashcards.length > 0) {
-			this.createExpandableStatSection(statsContainer, '📝 Changed', this.analysis.changedFlashcards.length, 'cards will be updated', 'sync-stat-changed', () => {
+			this.createExpandableStatSection(statsContainer, '📝 Changed', this.analysis.changedFlashcards.length, 'sync-stat-changed', () => {
 				return this.createChangedFlashcardsContent();
 			});
 		}
 		
 		if (this.analysis.invalidFlashcards.length > 0) {
-			this.createExpandableStatSection(statsContainer, '❌ Invalid', this.analysis.invalidFlashcards.length, 'cards have errors', 'sync-stat-invalid', () => {
+			this.createExpandableStatSection(statsContainer, '❌ Invalid', this.analysis.invalidFlashcards.length, 'sync-stat-invalid', () => {
 				return this.createInvalidFlashcardsContent();
 			});
 		}
@@ -515,13 +515,13 @@ export class SyncConfirmationModal extends Modal {
 		}
 		
 		if (this.analysis.unsyncedMediaItems.length > 0) {
-			this.createExpandableStatSection(statsContainer, '📁 Media', this.analysis.unsyncedMediaItems.length, 'files will be synced', 'sync-stat-media', () => {
+			this.createExpandableStatSection(statsContainer, '📁 Media', this.analysis.unsyncedMediaItems.length, 'sync-stat-media', () => {
 				return this.createMediaChangesContent();
 			});
 		}
 		
 		if (this.analysis.unchangedFlashcards.length > 0) {
-			this.createExpandableStatSection(statsContainer, '✅ Unchanged', this.analysis.unchangedFlashcards.length, 'cards are up to date', 'sync-stat-unchanged', () => {
+			this.createExpandableStatSection(statsContainer, '✅ Unchanged', this.analysis.unchangedFlashcards.length, 'sync-stat-unchanged', () => {
 				return this.createUnchangedFlashcardsContent();
 			});
 		}
@@ -576,7 +576,9 @@ export class SyncConfirmationModal extends Modal {
 		contentEl.empty();
 	}
 
-	private createExpandableStatSection(container: HTMLElement, label: string, count: number, description: string, cssClass: string, contentCreator: () => HTMLElement) {
+	private createExpandableStatSection(container: HTMLElement, label: string, count: number, cssClass: string, contentCreator: {
+		(): HTMLElement
+	}) {
 		const details = container.createEl('details', { cls: `sync-stat-item ${cssClass} sync-expandable-stat` });
 		const summary = details.createEl('summary', { cls: 'sync-expandable-stat-summary' });
 		
@@ -843,7 +845,7 @@ export class SyncConfirmationModal extends Modal {
 			
 			// Show file size info
 			const fileSize = Math.round(mediaItem.contents.length * 0.75 / 1024); // Rough base64 to KB conversion
-			const sizeInfo = item.createEl('div', { 
+			item.createEl('div', {
 				cls: 'sync-media-info',
 				text: `${fileSize} KB`
 			});
