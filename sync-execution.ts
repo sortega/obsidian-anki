@@ -366,7 +366,7 @@ export class SyncExecutionModal extends Modal {
 		}
 	}
 
-	private async syncMediaFiles(completed: number, totalOperations: number) {
+	private async syncMediaFiles(completed: number, totalOperations: number): Promise<void> {
 		this.updateProgress(completed / totalOperations, `Syncing ${this.analysis.unsyncedMediaItems.length} media files...`);
 
 		for (let i = 0; i < this.analysis.unsyncedMediaItems.length; i++) {

@@ -344,7 +344,7 @@ export class YankiConnectAnkiService implements AnkiService {
 
 	async storeMediaFile(mediaItem: MediaItem): Promise<string> {
 		const ankiFilename = this.generateAnkiMediaFilename(mediaItem);
-		const base64Data = btoa(String.fromCharCode(...mediaItem.contents));
+		const base64Data = this.arrayBufferToBase64(mediaItem.contents);
 		return await this.yankiConnect.media.storeMediaFile({
 			filename: ankiFilename,
 			data: base64Data
@@ -357,11 +357,15 @@ export class YankiConnectAnkiService implements AnkiService {
 			const encodedContents = await this.yankiConnect.media.retrieveMediaFile({
 				filename: ankiFilename
 			});
-			return encodedContents === btoa(String.fromCharCode(...mediaItem.contents));
+			return encodedContents === this.arrayBufferToBase64(mediaItem.contents);
 		} catch (error) {
 			console.warn(`Failed to check if media file exists ${mediaItem.sourcePath}:`, error);
 			return false;
 		}
+	}
+
+	private arrayBufferToBase64(buffer: Uint8Array): string {
+		return Buffer.from(buffer).toString('base64');
 	}
 
 	/**
