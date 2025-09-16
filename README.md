@@ -168,7 +168,7 @@ likely want this in your back template.
 	  const container = document.getElementById('note-id');
 	  if (!container) return;
   
-	  const tags = '{{text:Tags}}'.split(' ');
+	  const tags = "{{text:Tags}}".split(' ');
 	  const vaultTag = tags.find(t => t.startsWith('obsidian-vault::'));
 	  const fileTag = tags.find(t => t.startsWith('obsidian-file::'));
   
