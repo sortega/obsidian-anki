@@ -110,4 +110,16 @@ describe('Media Extraction from HTML', () => {
     
     expect(mediaPaths).toEqual(['image.png', 'video.mp4']);
   });
+
+  it('should extract media from converted Obsidian wikilinks', () => {
+    // Test that wikilinks are converted to img tags and then extracted
+    const htmlFlashcard = createMockHtmlFlashcard({
+      Front: '<img src="wikilink-image.png" width="100"> <img src="nested/photo.jpg" width="150" height="200">',
+      Back: '<img src="animation.gif">'
+    });
+
+    const mediaPaths = (modal as any).extractMediaPaths(htmlFlashcard);
+    
+    expect(mediaPaths).toEqual(['wikilink-image.png', 'nested/photo.jpg', 'animation.gif']);
+  });
 });

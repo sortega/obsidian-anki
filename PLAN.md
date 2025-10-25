@@ -11,7 +11,6 @@
 - Better error handling for note type mismatches
 - Sync external media (`https://example.com/...`)
 - Sync `data:` links
-- Sync Obsidian image syntax (`![[image]]`)
 - Sync other media (low priority)
 
 ### Import flashcard

@@ -148,7 +148,8 @@ Images in your notes are synchronized with the following limitations:
 
 - Only local media, no external links nor `data:` links
 - Only images
-- Only Markdown (`![alt](path/to/image)`) or HTML images are synced. The Obsidian image syntax (`![[image]]`) is not supported
+- Both Markdown (`![alt](path/to/image)`), Obsidian (`![[image]]`) and HTML (`<img src="path/to/image"/>`) syntaxes are
+  supported.
 
 ### Obsidian Backlinks
 
