@@ -20,6 +20,13 @@ This is an Obsidian plugin called "Obsidian Anki" that syncs Obsidian notes to A
 - `npm run build` - Build for production with type checking
 - `npm run version` - Bump version in manifest.json and package.json
 
+## Releasing
+
+1. Update `minAppVersion` in `manifest.json` if needed
+2. Run `npm version patch`, `npm version minor`, or `npm version major` to bump versions
+3. Create a GitHub release using the version number as the tag (e.g., `1.0.1`, no `v` prefix)
+4. Upload `manifest.json`, `main.js`, and `styles.css` as release assets
+
 ## Architecture
 
 The plugin follows hexagonal architecture principles with clean separation between business logic and technical implementation:

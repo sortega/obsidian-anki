@@ -21,7 +21,8 @@ Sync your Obsidian notes to Anki flashcards seamlessly. This plugin allows you t
 
 ### Prerequisites
 1. Install [Anki](https://apps.ankiweb.net/) on your computer
-2. Install the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) addon in Anki
+2. Install the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) addon in Anki. Add `app://obsidian.md` to `webCorsOriginList` 
+   in its configuration or the plugin won't be able to connect.
 3. Restart Anki to activate AnkiConnect
 
 ### Plugin Installation
